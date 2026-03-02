@@ -1,6 +1,6 @@
 # Agent hook helpers
 
-`emit-event.sh` writes normalized turn events that Constellagent consumes:
+`emit-event.sh` writes normalized turn events that MakuLabs Manager consumes:
 
 ```bash
 emit-event.sh <agent> <turn_event_type> [turn_outcome]
@@ -19,4 +19,4 @@ Required environment:
 
 Optional environment:
 - `AGENT_ORCH_SESSION_ID` (session correlation key)
-- `CONSTELLAGENT_AGENT_EVENT_DIR` (defaults to `/tmp/constellagent-agent-events`)
+- `MAKULABS_MANAGER_AGENT_EVENT_DIR` (defaults to `/tmp/makulabs-manager-agent-events`)

@@ -1,4 +1,4 @@
-# Constellagent
+# MakuLabs Manager
 
 A macOS desktop app for running multiple AI agents in parallel. Each agent gets its own terminal, editor, and git worktree, all in one window.
 
@@ -38,5 +38,5 @@ bun run test      # Playwright e2e tests
 ```
 
 Automation scheduling notes:
-- If the laptop sleeps during a scheduled time while the app is still running, Constellagent runs one catch-up execution on wake.
+- If the laptop sleeps during a scheduled time while the app is still running, MakuLabs Manager runs one catch-up execution on wake.
 - If the app is fully quit, missed runs are not backfilled on next launch.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code UserPromptSubmit hook for Constellagent.
+# Claude Code UserPromptSubmit hook for MakuLabs Manager.
 # Emits a normalized turn_started event.
 
 WS_ID="${AGENT_ORCH_WS_ID:-}"

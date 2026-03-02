@@ -12,7 +12,7 @@ export interface ControlledElectronApp {
 
 export async function launchControlledApp(label: string): Promise<ControlledElectronApp> {
   const suffix = `${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`
-  const eventDir = join(TMP_DIR, `constellagent-agent-events-${suffix}`)
+const eventDir = join(TMP_DIR, `makulabs-manager-agent-events-${suffix}`)
 
   const app = await electron.launch({
     args: [appPath],
@@ -20,7 +20,7 @@ export async function launchControlledApp(label: string): Promise<ControlledElec
       ...process.env,
       CI_TEST: '1',
       ELECTRON_RENDERER_URL: '',
-      CONSTELLAGENT_AGENT_EVENT_DIR: eventDir,
+      MAKULABS_MANAGER_AGENT_EVENT_DIR: eventDir,
     },
   })
 

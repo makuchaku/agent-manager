@@ -6,10 +6,10 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { useAppStore } from '../../store/app-store'
 import styles from './TerminalPanel.module.css'
 
-const PR_POLL_HINT_EVENT = 'constellagent:pr-poll-hint'
+const PR_POLL_HINT_EVENT = 'makulabs-manager:pr-poll-hint'
 const PR_POLL_HINT_COMMAND_RE =
   /^(?:[A-Za-z_][A-Za-z0-9_]*=(?:'[^']*'|"[^"]*"|\S+)\s+)*(?:sudo\s+)?(?:(?:git\s+push)|(?:gh\s+pr\s+(?:create|ready|reopen|merge)))(?:\s|$)/
-const TERMINAL_SNAPSHOT_KEY_PREFIX = 'constellagent:terminal-snapshot:'
+const TERMINAL_SNAPSHOT_KEY_PREFIX = 'makulabs-manager:terminal-snapshot:'
 const TERMINAL_SNAPSHOT_VERSION = 1
 const TERMINAL_SNAPSHOT_MAX_CHARS = 2_000_000
 

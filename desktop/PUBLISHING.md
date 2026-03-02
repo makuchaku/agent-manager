@@ -1,4 +1,4 @@
-# Publishing Constellagent
+# Publishing MakuLabs Manager
 
 ## Local Build (signed + notarized DMG)
 
@@ -24,7 +24,7 @@ export APPLE_TEAM_ID="XXXXXXXXXX"
 bun run dist
 ```
 
-Output: `dist/constellagent-1.0.0.dmg` (signed + notarized)
+Output: `dist/makulabs-manager-1.0.0.dmg` (signed + notarized)
 
 ## GitHub Actions Release
 

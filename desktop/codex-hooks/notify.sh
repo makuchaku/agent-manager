@@ -1,5 +1,5 @@
 #!/bin/bash
-# Codex notify hook script for Constellagent.
+# Codex notify hook script for MakuLabs Manager.
 # Called by Codex `notify` after a turn finishes.
 
 WS_ID="${AGENT_ORCH_WS_ID:-}"

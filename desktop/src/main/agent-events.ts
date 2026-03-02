@@ -2,7 +2,7 @@ import { mkdirSync, renameSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { AgentTurnEvent, AgentTurnEventType, AgentTurnOutcome } from '../shared/agent-events'
 
-const DEFAULT_AGENT_EVENT_DIR = '/tmp/constellagent-agent-events'
+const DEFAULT_AGENT_EVENT_DIR = '/tmp/makulabs-manager-agent-events'
 
 interface EmitAgentTurnEventInput {
   workspaceId: string
@@ -14,7 +14,7 @@ interface EmitAgentTurnEventInput {
 }
 
 export function getAgentEventDir(): string {
-  return process.env.CONSTELLAGENT_AGENT_EVENT_DIR || DEFAULT_AGENT_EVENT_DIR
+  return process.env.MAKULABS_MANAGER_AGENT_EVENT_DIR || DEFAULT_AGENT_EVENT_DIR
 }
 
 export function emitAgentTurnEvent(input: EmitAgentTurnEventInput): void {

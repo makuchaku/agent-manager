@@ -57,15 +57,15 @@ function createWindow(): void {
   }
 }
 
-app.setName('Constellagent')
+app.setName('MakuLabs Manager')
 
 // Isolate test data so e2e tests never touch real app state
 if (process.env.CI_TEST) {
   const { mkdtempSync } = require('fs')
   const { join } = require('path')
-  const testData = mkdtempSync(join(require('os').tmpdir(), 'constellagent-test-'))
+  const testData = mkdtempSync(join(require('os').tmpdir(), 'makulabs-manager-test-'))
   app.setPath('userData', testData)
-  process.env.CONSTELLAGENT_AGENT_EVENT_DIR ||= join(testData, 'agent-events')
+  process.env.MAKULABS_MANAGER_AGENT_EVENT_DIR ||= join(testData, 'agent-events')
 }
 
 app.whenReady().then(() => {

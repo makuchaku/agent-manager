@@ -1,5 +1,5 @@
 #!/bin/bash
-# Emit a normalized Constellagent turn event.
+# Emit a normalized MakuLabs Manager turn event.
 # Usage: emit-event.sh <agent> <turn_event_type> [turn_outcome]
 
 AGENT="$1"
@@ -35,7 +35,7 @@ if [ "$TURN_EVENT_TYPE" = "turn_started" ]; then
   TURN_OUTCOME=""
 fi
 
-EVENT_DIR="${CONSTELLAGENT_AGENT_EVENT_DIR:-/tmp/constellagent-agent-events}"
+EVENT_DIR="${MAKULABS_MANAGER_AGENT_EVENT_DIR:-/tmp/makulabs-manager-agent-events}"
 mkdir -p "$EVENT_DIR"
 TARGET="$EVENT_DIR/$(date +%s%N)-$$"
 TMP_TARGET="${TARGET}.tmp"

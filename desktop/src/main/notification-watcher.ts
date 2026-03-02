@@ -21,7 +21,7 @@ function isTurnOutcome(value: string): value is AgentTurnOutcome {
 
 export class NotificationWatcher {
   constructor(
-    private readonly eventDir = process.env.CONSTELLAGENT_AGENT_EVENT_DIR || AGENT_EVENT_DEFAULT_DIR,
+    private readonly eventDir = process.env.MAKULABS_MANAGER_AGENT_EVENT_DIR || AGENT_EVENT_DEFAULT_DIR,
   ) {}
 
   private timer: ReturnType<typeof setInterval> | null = null

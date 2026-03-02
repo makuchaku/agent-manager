@@ -1,5 +1,5 @@
 {
-  "name": "constellagent-root",
+  "name": "makulabs-manager-root",
   "private": true,
   "scripts": {
     "postinstall": "bun install --cwd desktop",

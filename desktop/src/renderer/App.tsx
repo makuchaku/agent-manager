@@ -103,7 +103,7 @@ export function App() {
 
                   {!activeTab ? (
                     <div className={styles.welcome}>
-                      <div className={styles.welcomeLogo}>constellagent</div>
+                      <div className={styles.welcomeLogo}>MakuLabs Manager</div>
                       <div className={styles.welcomeHint}>
                         Add a project to get started, or press
                         <span className={styles.welcomeShortcut}>⌘T</span>

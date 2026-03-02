@@ -694,14 +694,14 @@ export function registerIpcHandlers(): void {
     const img = clipboard.readImage()
     if (img.isEmpty()) return null
     const buf = img.toPNG()
-    const filePath = join(tmpdir(), `constellagent-paste-${Date.now()}.png`)
+    const filePath = join(tmpdir(), `makulabs-manager-paste-${Date.now()}.png`)
     await writeFile(filePath, buf)
     return filePath
   })
 
   // ── State persistence handlers ──
   const stateFilePath = () =>
-    join(app.getPath('userData'), 'constellagent-state.json')
+    join(app.getPath('userData'), 'makulabs-manager-state.json')
 
   ipcMain.handle(IPC.STATE_SAVE, async (_e, data: unknown) => {
     await mkdir(app.getPath('userData'), { recursive: true })

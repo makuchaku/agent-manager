@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code PreToolUse hook for Constellagent.
+# Claude Code PreToolUse hook for MakuLabs Manager.
 # Detects AskUserQuestion tool invocations and forwards to notify hook so
 # question dialogs mark the workspace unread and clear active state.
 

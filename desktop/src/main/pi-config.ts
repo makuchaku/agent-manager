@@ -4,14 +4,14 @@ import { homedir } from 'os'
 
 export const PI_AGENT_DIR = join(homedir(), '.pi', 'agent')
 export const PI_EXTENSIONS_DIR = join(PI_AGENT_DIR, 'extensions')
-export const PI_ACTIVITY_EXTENSION_FILE = join(PI_EXTENSIONS_DIR, 'constellagent-activity.ts')
+export const PI_ACTIVITY_EXTENSION_FILE = join(PI_EXTENSIONS_DIR, 'makulabs-manager-activity.ts')
 
-const EXTENSION_MARKER = 'Constellagent pi-mono activity extension'
+const EXTENSION_MARKER = 'MakuLabs Manager pi-mono activity extension'
 
 const PI_ACTIVITY_EXTENSION_SOURCE = `/**
  * ${EXTENSION_MARKER}
  *
- * Auto-installed by Constellagent.
+ * Auto-installed by MakuLabs Manager.
  * Emits normalized turn events for interactive pi/pi-mono sessions.
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -23,7 +23,7 @@ type AgentTurnOutcome = "success" | "failed";
 
 const WS_ID = process.env.AGENT_ORCH_WS_ID?.trim();
 const SESSION_ID = process.env.AGENT_ORCH_SESSION_ID?.trim();
-const EVENT_DIR = process.env.CONSTELLAGENT_AGENT_EVENT_DIR || "/tmp/constellagent-agent-events";
+const EVENT_DIR = process.env.MAKULABS_MANAGER_AGENT_EVENT_DIR || "/tmp/makulabs-manager-agent-events";
 
 function emit(type: AgentTurnType, outcome?: AgentTurnOutcome): void {
   if (!WS_ID) return;

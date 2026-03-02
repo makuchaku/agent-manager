@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   Constellagent Landing — main.js
+   MakuLabs Manager Landing — main.js
    Constellation canvas, scroll animations, nav behavior
    ═══════════════════════════════════════════════════════ */
 

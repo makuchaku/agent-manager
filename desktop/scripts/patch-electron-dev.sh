@@ -24,8 +24,8 @@ if [ -f "$ICNS_SRC" ]; then
 fi
 
 # Set app name in plist (affects dock tooltip + About dialog)
-/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'Constellagent'" "$PLIST" 2>/dev/null
-/usr/libexec/PlistBuddy -c "Set :CFBundleName 'Constellagent'" "$PLIST" 2>/dev/null
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'MakuLabs Manager'" "$PLIST" 2>/dev/null
+/usr/libexec/PlistBuddy -c "Set :CFBundleName 'MakuLabs Manager'" "$PLIST" 2>/dev/null
 
 # Re-register bundle with Launch Services
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "node_modules/electron/dist/Electron.app" 2>/dev/null

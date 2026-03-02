@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code hook script for Constellagent.
+# Claude Code hook script for MakuLabs Manager.
 # Called by Claude Code Stop + Notification hooks.
 
 WS_ID="${AGENT_ORCH_WS_ID:-}"
