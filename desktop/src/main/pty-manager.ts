@@ -158,7 +158,8 @@ export class PtyManager {
       file = command[0]
       args = command.slice(1)
     } else {
-      file = (shell && shell.trim()) || process.env.SHELL || '/bin/zsh'
+      const isWindows = process.platform === 'win32'
+      file = (shell && shell.trim()) || (isWindows ? (process.env.COMSPEC || 'powershell.exe') : (process.env.SHELL || '/bin/zsh'))
       args = []
     }
 

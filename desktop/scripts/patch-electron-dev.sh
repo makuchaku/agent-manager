@@ -1,6 +1,6 @@
 #!/bin/bash
 # Patches Electron.app for dev mode: replaces icon + sets app name in plist.
-# macOS only — exits cleanly on other platforms.
+# macOS only â€” exits cleanly on other platforms.
 # Run after `bun install` or manually. Requires full app restart (Cmd+Q) to take effect.
 
 if [ "$(uname)" != "Darwin" ]; then

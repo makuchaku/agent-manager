@@ -7,6 +7,11 @@ export default defineConfig({
       alias: {
         '@shared': resolve(__dirname, 'src/shared')
       }
+    },
+    build: {
+      rollupOptions: {
+        external: ['node-pty', 'node-cron', 'electron']
+      }
     }
   },
   preload: {

@@ -5,13 +5,13 @@
   "description": "Mac app for running multiple AI agents in parallel",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "NODE_PATH=./node_modules electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "test": "bunx playwright test --project=electron",
     "rebuild": "bunx electron-rebuild",
     "dist": "electron-vite build && electron-builder --mac --arm64",
-    "postinstall": "bash scripts/patch-electron-dev.sh && bunx electron-rebuild"
+    "postinstall": "bash scripts/patch-electron-dev.sh || true"
   },
   "keywords": [],
   "author": "",
