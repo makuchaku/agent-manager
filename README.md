@@ -1,4 +1,4 @@
-# MakuLabs Manager
+# MakuLabs Manager for OpenCode
 
 A macOS desktop app for running multiple AI agents in parallel. Each agent gets its own terminal, editor, and git worktree, all in one window.
 
