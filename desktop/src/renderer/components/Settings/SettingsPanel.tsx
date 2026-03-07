@@ -344,6 +344,15 @@ export function SettingsPanel() {
             value={settings.editorFontSize}
             onChange={(v) => update('editorFontSize', v)}
           />
+
+          <NumberRow
+            label="UI font size"
+            description="Font size in pixels for sidebar, panels, and dialogs"
+            value={settings.uiFontSize}
+            min={8}
+            max={24}
+            onChange={(v) => update('uiFontSize', v)}
+          />
         </div>
 
         <div className={styles.section}>

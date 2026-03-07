@@ -56,6 +56,7 @@ export interface Settings {
   diffInline: boolean
   terminalFontSize: number
   editorFontSize: number
+  uiFontSize: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -66,6 +67,7 @@ export const DEFAULT_SETTINGS: Settings = {
   diffInline: false,
   terminalFontSize: 14,
   editorFontSize: 13,
+  uiFontSize: 12,
 }
 
 export interface Toast {

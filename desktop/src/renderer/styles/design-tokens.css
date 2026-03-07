@@ -67,17 +67,20 @@
   --term-white: #a9b1d6;
 
   /* ═══════════════════════════════════════════════════════
-     TYPOGRAPHY
-     ═══════════════════════════════════════════════════════ */
+      TYPOGRAPHY
+      Note: --text-base is the source of truth. All other sizes
+      are derived using calc() relative to text-base.
+      The runtime uiFontSize setting updates --text-base.
+      ═══════════════════════════════════════════════════════ */
   --font-mono: 'SF Mono', 'Menlo', 'Cascadia Code', 'JetBrains Mono', monospace;
   --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
 
-  --text-xs: 10px;
-  --text-sm: 11px;
   --text-base: 12px;
-  --text-md: 13px;
-  --text-lg: 14px;
-  --text-xl: 16px;
+  --text-xs: calc(var(--text-base) * 0.833);
+  --text-sm: calc(var(--text-base) * 0.917);
+  --text-md: calc(var(--text-base) * 1.083);
+  --text-lg: calc(var(--text-base) * 1.167);
+  --text-xl: calc(var(--text-base) * 1.333);
 
   --leading-tight: 1.3;
   --leading-normal: 1.5;
