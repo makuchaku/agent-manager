@@ -138,3 +138,46 @@
   --titlebar-height: 38px;     /* macOS traffic lights area */
   --status-bar-height: 22px;
 }
+
+/*
+ * Light Theme Overrides
+ * Applied when data-theme="light" is set on the document.
+ * Terminal colors remain unchanged (Tokyo Night palette).
+ */
+[data-theme="light"] {
+  --surface-0: #ffffff;
+  --surface-1: #f8f9fa;
+  --surface-2: #f1f3f5;
+  --surface-3: #e9ecef;
+  --surface-4: #dee2e6;
+
+  --border-subtle: #e9ecef;
+  --border-default: #dee2e6;
+  --border-strong: #ced4da;
+  --border-accent: #1971c2;
+
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-tertiary: #868e96;
+  --text-ghost: #adb5bd;
+  --text-inverse: #ffffff;
+
+  --accent-blue: #1971c2;
+  --accent-blue-dim: #d0ebff;
+  --accent-blue-glow: rgba(25, 113, 194, 0.08);
+  --accent-cyan: #1971c2;
+  --accent-purple: #845ef7;
+  --accent-green: #2f9e44;
+  --accent-green-muted: #51cf66;
+  --accent-green-dim: rgba(47, 158, 68, 0.12);
+  --accent-red: #e03131;
+  --accent-red-dim: rgba(224, 49, 49, 0.12);
+  --accent-orange: #f08c00;
+  --accent-orange-dim: rgba(240, 140, 0, 0.12);
+  --accent-yellow: #f08c00;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-inset: inset 0 1px 0 rgba(0, 0, 0, 0.05);
+}

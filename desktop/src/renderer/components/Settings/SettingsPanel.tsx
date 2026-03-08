@@ -361,6 +361,13 @@ export function SettingsPanel() {
             onChange={(v) => update('terminalStartupCommand', v)}
             placeholder="e.g., echo 'Hello'"
           />
+
+          <ToggleRow
+            label="Light theme"
+            description="Use light colors instead of dark theme"
+            value={settings.theme === 'light'}
+            onChange={(v) => update('theme', v ? 'light' : 'dark')}
+          />
         </div>
 
         <div className={styles.section}>

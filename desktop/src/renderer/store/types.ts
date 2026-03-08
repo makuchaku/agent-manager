@@ -48,6 +48,8 @@ export type RightPanelMode = 'files' | 'changes'
 
 export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
 
+export type Theme = 'dark' | 'light'
+
 export interface Settings {
   confirmOnClose: boolean
   autoSaveOnBlur: boolean
@@ -58,6 +60,7 @@ export interface Settings {
   editorFontSize: number
   uiFontSize: number
   terminalStartupCommand: string
+  theme: Theme
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -70,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editorFontSize: 13,
   uiFontSize: 12,
   terminalStartupCommand: '',
+  theme: 'dark',
 }
 
 export interface Toast {

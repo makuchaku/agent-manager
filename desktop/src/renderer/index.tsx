@@ -18,6 +18,15 @@ function UiFontSizeSetter() {
   return null
 }
 
+// Apply theme setting (dark/light) to data-theme attribute
+function ThemeSetter() {
+  const theme = useAppStore((s) => s.settings.theme)
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+  return null
+}
+
 // Hydrate persisted state (tabs, PTYs) BEFORE rendering to avoid
 // mounting terminals with stale pty IDs that get replaced moments later.
 hydrateFromDisk().then(() => {
@@ -25,6 +34,7 @@ hydrateFromDisk().then(() => {
   root.render(
     <StrictMode>
       <UiFontSizeSetter />
+      <ThemeSetter />
       <App />
     </StrictMode>
   )
