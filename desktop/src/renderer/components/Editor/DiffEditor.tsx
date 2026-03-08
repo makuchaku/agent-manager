@@ -117,8 +117,8 @@ const DiffFileSection = memo(function DiffFileSection({
         <PatchDiff
           patch={data.patch}
           options={{
-            theme: 'tokyo-night',
-            themeType: 'dark',
+            theme: diffTheme,
+            themeType: diffThemeType,
             diffStyle: inline ? 'unified' : 'split',
             diffIndicators: 'bars',
             lineDiffType: 'word-alt',
@@ -172,6 +172,10 @@ export function DiffViewer({ worktreePath, active }: Props) {
   const updateSettings = useAppStore((s) => s.updateSettings)
   const openFileTab = useAppStore((s) => s.openFileTab)
   const inline = settings.diffInline
+
+  // Map app theme to diff viewer theme
+  const diffTheme = settings.theme === 'light' ? 'light' : 'tokyo-night'
+  const diffThemeType = settings.theme === 'light' ? 'light' : 'dark'
 
   // Load all changed files
   const loadFiles = useCallback(async () => {

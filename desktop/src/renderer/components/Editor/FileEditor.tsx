@@ -131,7 +131,7 @@ export function FileEditor({ tabId, filePath, active }: Props) {
         height="100%"
         language={getLanguage(filePath)}
         value={content}
-        theme="vs-dark"
+        theme={settings.editorTheme}
         onChange={handleChange}
         onMount={handleEditorMount}
         options={{

@@ -106,6 +106,34 @@ function NumberRow({ label, description, value, onChange, min = 8, max = 32 }: {
   )
 }
 
+function SelectRow({ label, description, value, options, onChange }: {
+  label: string
+  description: string
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowText}>
+        <div className={styles.rowLabel}>{label}</div>
+        <div className={styles.rowDescription}>{description}</div>
+      </div>
+      <select
+        className={styles.selectInput}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 function ClaudeHooksSection() {
   const [installed, setInstalled] = useState<boolean | null>(null)
   const [installing, setInstalling] = useState(false)
@@ -343,6 +371,18 @@ export function SettingsPanel() {
             description="Font size in pixels for file and diff editors"
             value={settings.editorFontSize}
             onChange={(v) => update('editorFontSize', v)}
+          />
+
+          <SelectRow
+            label="Editor theme"
+            description="Color theme for file and diff editors"
+            value={settings.editorTheme}
+            onChange={(v) => update('editorTheme', v)}
+            options={[
+              { value: 'vs-dark', label: 'Dark (Default)' },
+              { value: 'vs', label: 'Light' },
+              { value: 'hc-black', label: 'High Contrast' },
+            ]}
           />
 
           <NumberRow
