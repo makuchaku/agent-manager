@@ -44,7 +44,7 @@ export type Tab = {
   | { type: 'diff' }
 )
 
-export type RightPanelMode = 'files' | 'changes'
+export type RightPanelMode = 'gemini' | 'files' | 'changes'
 
 export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
 

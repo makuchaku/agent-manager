@@ -54,6 +54,7 @@ export function App() {
 
   const allTabs = useAppStore((s) => s.tabs)
   const activeTabId = useAppStore((s) => s.activeTabId)
+  const rightPanelMode = useAppStore((s) => s.rightPanelMode)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
   const activeWorkspaceTabs = useAppStore((s) => s.activeWorkspaceTabs)
@@ -139,8 +140,8 @@ export function App() {
             {/* Right Panel (Activity Bar + Sidebar Content) */}
             <Allotment.Pane
               minSize={48}
-              maxSize={rightPanelOpen ? 500 : 48}
-              preferredSize={rightPanelOpen ? 320 : 48}
+              maxSize={rightPanelOpen ? (rightPanelMode === 'gemini' ? 1000 : 500) : 48}
+              preferredSize={rightPanelOpen ? (rightPanelMode === 'gemini' ? 600 : 320) : 48}
               snap={true}
             >
               <RightPanel />

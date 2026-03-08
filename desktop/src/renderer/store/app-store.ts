@@ -21,7 +21,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeWorkspaceId: null,
   activeTabId: null,
   lastActiveTabByWorkspace: {},
-  rightPanelMode: 'files',
+  rightPanelMode: 'gemini',
   rightPanelOpen: true,
   sidebarCollapsed: false,
   lastSavedTabId: null,

@@ -33,6 +33,7 @@ function createWindow(): void {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false, // needed for node-pty IPC
+      webviewTag: true, // needed for Gemini view
     },
   })
 

@@ -14,7 +14,7 @@ export function RightPanel() {
 
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
 
-  const handleToggle = (mode: 'files' | 'changes') => {
+  const handleToggle = (mode: 'gemini' | 'files' | 'changes') => {
     if (rightPanelMode === mode && rightPanelOpen) {
       toggleRightPanel()
     } else {
@@ -27,6 +27,26 @@ export function RightPanel() {
     <div className={styles.rightPanel}>
       {/* Activity Bar (Always visible on the far right) */}
       <div className={styles.activityBar}>
+        <Tooltip label="Gemini">
+          <button
+            className={`${styles.activityButton} ${rightPanelOpen && rightPanelMode === 'gemini' ? styles.active : ''}`}
+            onClick={() => handleToggle('gemini')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+                fill="url(#gemini-gradient)"
+              />
+              <defs>
+                <linearGradient id="gemini-gradient" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#4E8CFF" />
+                  <stop offset="100%" stopColor="#D961FF" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </button>
+        </Tooltip>
+
         <Tooltip label="Files" shortcut="⇧⌘E">
           <button
             className={`${styles.activityButton} ${rightPanelOpen && rightPanelMode === 'files' ? styles.active : ''}`}
@@ -54,40 +74,53 @@ export function RightPanel() {
         </Tooltip>
       </div>
 
-      {/* Main Content Area (Hidden if panel is closed) */}
-      {rightPanelOpen && (
-        <div className={styles.mainContent}>
-          <div className={styles.header}>
-            <div className={styles.headerTitle}>
-              {rightPanelMode === 'files' ? 'Explorer' : 'Source Control'}
-            </div>
+      {/* Main Content Area (Always mounted to prevent webview reload) */}
+      <div 
+        className={styles.mainContent}
+        style={{ display: rightPanelOpen ? 'flex' : 'none' }}
+      >
+        <div className={styles.header}>
+          <div className={styles.headerTitle}>
+            {rightPanelMode === 'gemini' ? 'Gemini' : rightPanelMode === 'files' ? 'Explorer' : 'Source Control'}
+          </div>
+        </div>
+
+        <div className={styles.content}>
+          {/* Gemini View (Persistent) */}
+          <div style={{ display: rightPanelMode === 'gemini' ? 'contents' : 'none' }}>
+            <webview
+              src="https://gemini.google.com"
+              style={{ width: '100%', height: '100%', background: '#1e1e1e' }}
+              useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            />
           </div>
 
-          <div className={styles.content}>
-            {!workspace ? (
-              <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>📁</span>
-                <span className={styles.emptyText}>
-                  Select a workspace to browse files
-                </span>
+          {/* Files/Changes Views */}
+          {!workspace && rightPanelMode !== 'gemini' ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}>📁</span>
+              <span className={styles.emptyText}>
+                Select a workspace to browse files
+              </span>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: rightPanelMode === 'files' ? 'contents' : 'none' }}>
+                {workspace && <FileTree worktreePath={workspace.worktreePath} isActive={rightPanelMode === 'files'} />}
               </div>
-            ) : (
-              <>
-                <div style={{ display: rightPanelMode === 'files' ? 'contents' : 'none' }}>
-                  <FileTree worktreePath={workspace.worktreePath} isActive={rightPanelMode === 'files'} />
-                </div>
-                <div style={{ display: rightPanelMode === 'changes' ? 'contents' : 'none' }}>
+              <div style={{ display: rightPanelMode === 'changes' ? 'contents' : 'none' }}>
+                {workspace && (
                   <ChangedFiles
                     worktreePath={workspace.worktreePath}
                     workspaceId={workspace.id}
                     isActive={rightPanelMode === 'changes'}
                   />
-                </div>
-              </>
-            )}
-          </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
