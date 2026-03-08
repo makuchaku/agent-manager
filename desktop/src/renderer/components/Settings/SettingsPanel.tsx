@@ -353,6 +353,14 @@ export function SettingsPanel() {
             max={24}
             onChange={(v) => update('uiFontSize', v)}
           />
+
+          <TextRow
+            label="Terminal startup command"
+            description="Command to run when a new terminal opens (leave empty to disable)"
+            value={settings.terminalStartupCommand}
+            onChange={(v) => update('terminalStartupCommand', v)}
+            placeholder="e.g., echo 'Hello'"
+          />
         </div>
 
         <div className={styles.section}>

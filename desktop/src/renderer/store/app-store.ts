@@ -5,6 +5,14 @@ import { titleFromTerminalCommand } from './terminal-tab-title'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
 
+function executeTerminalStartupCommand(ptyId: string, command: string) {
+  if (!command.trim()) return
+  setTimeout(() => {
+    // Adding '\r\n' simulates pressing Enter to execute the command
+    window.api.pty.write(ptyId, command + '\r\n')
+  }, 500)
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   workspaces: [],
@@ -80,6 +88,10 @@ export const useAppStore = create<AppState>((set, get) => ({
             title: 'Terminal',
             ptyId,
           })
+          const startupCmd = get().settings.terminalStartupCommand
+          if (startupCmd) {
+            executeTerminalStartupCommand(ptyId, startupCmd)
+          }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Failed to start terminal'
           console.error('Failed to create PTY for new project:', err)
@@ -339,6 +351,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       title: `Terminal ${termCount + 1}`,
       ptyId,
     })
+    const startupCmd = s.settings.terminalStartupCommand
+    if (startupCmd) {
+      executeTerminalStartupCommand(ptyId, startupCmd)
+    }
   },
 
   closeActiveTab: () => {
@@ -716,6 +732,10 @@ export async function hydrateFromDisk(): Promise<void> {
           const newPtyId = await window.api.pty.create(ws.worktreePath, shell, { AGENT_ORCH_WS_ID: ws.id })
           const idx = updatedTabs.findIndex((t) => t.id === dead.id)
           if (idx !== -1) updatedTabs[idx] = { ...dead, ptyId: newPtyId }
+          const startupCmd = store.settings.terminalStartupCommand
+          if (startupCmd) {
+            executeTerminalStartupCommand(newPtyId, startupCmd)
+          }
         } catch {
           // If respawn fails, drop the tab
           const idx = updatedTabs.findIndex((t) => t.id === dead.id)
@@ -778,6 +798,10 @@ export async function hydrateFromDisk(): Promise<void> {
               },
             ],
           }))
+          const startupCmd = useAppStore.getState().settings.terminalStartupCommand
+          if (startupCmd) {
+            executeTerminalStartupCommand(ptyId, startupCmd)
+          }
         } catch {
           // If PTY creation fails, workspace still exists without a terminal
         }

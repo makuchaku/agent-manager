@@ -57,6 +57,7 @@ export interface Settings {
   terminalFontSize: number
   editorFontSize: number
   uiFontSize: number
+  terminalStartupCommand: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -68,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   terminalFontSize: 14,
   editorFontSize: 13,
   uiFontSize: 12,
+  terminalStartupCommand: '',
 }
 
 export interface Toast {
