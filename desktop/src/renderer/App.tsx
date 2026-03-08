@@ -136,12 +136,15 @@ export function App() {
               </div>
             </Allotment.Pane>
 
-            {/* Right Panel */}
-            {rightPanelOpen && (
-              <Allotment.Pane minSize={200} maxSize={500} preferredSize={280}>
-                <RightPanel />
-              </Allotment.Pane>
-            )}
+            {/* Right Panel (Activity Bar + Sidebar Content) */}
+            <Allotment.Pane
+              minSize={48}
+              maxSize={rightPanelOpen ? 500 : 48}
+              preferredSize={rightPanelOpen ? 320 : 48}
+              snap={true}
+            >
+              <RightPanel />
+            </Allotment.Pane>
           </Allotment>
         )}
       </div>
