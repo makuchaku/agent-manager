@@ -62,6 +62,8 @@ export interface Settings {
   terminalStartupCommand: string
   theme: Theme
   editorTheme: string
+  /** User-set right panel width in pixels (default: 320). Persists across sessions. */
+  rightPanelSize: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -76,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   terminalStartupCommand: '',
   theme: 'dark',
   editorTheme: 'vs-dark',
+  rightPanelSize: 320, // Default width for Gemini / Files panels (pixels)
 }
 
 export interface Toast {

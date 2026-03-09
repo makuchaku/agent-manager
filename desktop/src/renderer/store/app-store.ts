@@ -24,6 +24,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   rightPanelMode: 'gemini',
   rightPanelOpen: true,
   sidebarCollapsed: false,
+  /** User-configurable right panel width in pixels. */
+  rightPanelSize: DEFAULT_SETTINGS.rightPanelSize,
   lastSavedTabId: null,
   workspaceDialogProjectId: null,
   settings: { ...DEFAULT_SETTINGS },

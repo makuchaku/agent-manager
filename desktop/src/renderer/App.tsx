@@ -140,8 +140,8 @@ export function App() {
             {/* Right Panel (Activity Bar + Sidebar Content) */}
             <Allotment.Pane
               minSize={48}
-              maxSize={rightPanelOpen ? (rightPanelMode === 'gemini' ? 1000 : 500) : 48}
-              preferredSize={rightPanelOpen ? (rightPanelMode === 'gemini' ? 600 : 320) : 48}
+              maxSize={rightPanelOpen ? 1000 : 48}
+              preferredSize={rightPanelOpen ? useAppStore.getState().settings.rightPanelSize : 48}
               snap={true}
             >
               <RightPanel />
