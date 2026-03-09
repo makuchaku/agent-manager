@@ -5,14 +5,20 @@ import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './RightPanel.module.css'
 
 export function RightPanel() {
-  const rightPanelMode = useAppStore((s) => s.rightPanelMode)
+  const rightPanelModeRecord = useAppStore((s) => s.rightPanelMode)
   const setRightPanelMode = useAppStore((s) => s.setRightPanelMode)
-  const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
+  const rightPanelOpenRecord = useAppStore((s) => s.rightPanelOpen)
   const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
   const workspaces = useAppStore((s) => s.workspaces)
+  const projects = useAppStore((s) => s.projects)
 
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
+  const project = workspace ? projects.find((p) => p.id === workspace.projectId) : null
+
+  // Derive project-specific panel state, falling back to defaults
+  const rightPanelMode = project ? rightPanelModeRecord[project.id] ?? 'gemini' : 'gemini'
+  const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : true
 
   const handleToggle = (mode: 'gemini' | 'files' | 'changes') => {
     if (rightPanelMode === mode && rightPanelOpen) {
@@ -86,13 +92,29 @@ export function RightPanel() {
         </div>
 
         <div className={styles.content}>
-          {/* Gemini View (Persistent) */}
-          <div style={{ display: rightPanelMode === 'gemini' ? 'contents' : 'none' }}>
-            <webview
-              src="https://gemini.google.com"
-              style={{ width: '100%', height: '100%', background: '#1e1e1e' }}
-              useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            />
+          {/* Gemini View - Per-project webview pooling for session persistence */}
+          <div style={{ display: rightPanelMode === 'gemini' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0, position: 'relative' }}>
+            {projects.map((p) => {
+              const isActiveProject = project?.id === p.id
+              return (
+                <webview
+                  key={p.id}  // Stable key per project - keeps webview mounted
+                  src="https://gemini.google.com"
+                  partition={`persist:gemini-${p.id}`}  // Persistent partition per project
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: '#1e1e1e',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    visibility: isActiveProject ? 'visible' : 'hidden',
+                    opacity: isActiveProject ? 1 : 0,
+                  }}
+                  useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                />
+              )
+            })}
           </div>
 
           {/* Files/Changes Views */}
@@ -105,10 +127,10 @@ export function RightPanel() {
             </div>
           ) : (
             <>
-              <div style={{ display: rightPanelMode === 'files' ? 'contents' : 'none' }}>
+              <div style={{ display: rightPanelMode === 'files' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
                 {workspace && <FileTree worktreePath={workspace.worktreePath} isActive={rightPanelMode === 'files'} />}
               </div>
-              <div style={{ display: rightPanelMode === 'changes' ? 'contents' : 'none' }}>
+              <div style={{ display: rightPanelMode === 'changes' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
                 {workspace && (
                   <ChangedFiles
                     worktreePath={workspace.worktreePath}

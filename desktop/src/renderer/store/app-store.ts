@@ -21,11 +21,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeWorkspaceId: null,
   activeTabId: null,
   lastActiveTabByWorkspace: {},
-  rightPanelMode: 'gemini',
-  rightPanelOpen: true,
+  rightPanelMode: {},
+  rightPanelOpen: {},
+  rightPanelSize: {},
   sidebarCollapsed: false,
-  /** User-configurable right panel width in pixels. */
-  rightPanelSize: DEFAULT_SETTINGS.rightPanelSize,
   lastSavedTabId: null,
   workspaceDialogProjectId: null,
   settings: { ...DEFAULT_SETTINGS },
@@ -311,9 +310,39 @@ export const useAppStore = create<AppState>((set, get) => ({
       return changed ? { tabs } : s
     }),
 
-  setRightPanelMode: (mode) => set({ rightPanelMode: mode }),
+  setRightPanelMode: (mode) =>
+    set((s) => {
+      const projectId = s.activeWorkspaceId
+        ? s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.projectId
+        : null
+      if (!projectId) return s
+      return {
+        rightPanelMode: { ...s.rightPanelMode, [projectId]: mode },
+      }
+    }),
 
-  toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+  toggleRightPanel: () =>
+    set((s) => {
+      const projectId = s.activeWorkspaceId
+        ? s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.projectId
+        : null
+      if (!projectId) return s
+      const current = s.rightPanelOpen[projectId] ?? true
+      return {
+        rightPanelOpen: { ...s.rightPanelOpen, [projectId]: !current },
+      }
+    }),
+
+  setRightPanelSize: (size: number) =>
+    set((s) => {
+      const projectId = s.activeWorkspaceId
+        ? s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.projectId
+        : null
+      if (!projectId) return s
+      return {
+        rightPanelSize: { ...s.rightPanelSize, [projectId]: size },
+      }
+    }),
 
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
@@ -631,6 +660,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeTabId,
       lastActiveTabByWorkspace: data.lastActiveTabByWorkspace ?? {},
       settings,
+      rightPanelMode: data.rightPanelMode ?? {},
+      rightPanelOpen: data.rightPanelOpen ?? {},
+      rightPanelSize: data.rightPanelSize ?? {},
     })
   },
 
@@ -658,6 +690,9 @@ function getPersistedSlice(state: AppState): PersistedState {
     activeTabId: state.activeTabId,
     lastActiveTabByWorkspace: state.lastActiveTabByWorkspace,
     settings: state.settings,
+    rightPanelMode: state.rightPanelMode,
+    rightPanelOpen: state.rightPanelOpen,
+    rightPanelSize: state.rightPanelSize,
   }
 }
 
@@ -679,7 +714,10 @@ useAppStore.subscribe((state, prevState) => {
     state.activeTabId !== prevState.activeTabId ||
     state.automations !== prevState.automations ||
     state.activeWorkspaceId !== prevState.activeWorkspaceId ||
-    state.settings !== prevState.settings
+    state.settings !== prevState.settings ||
+    state.rightPanelMode !== prevState.rightPanelMode ||
+    state.rightPanelOpen !== prevState.rightPanelOpen ||
+    state.rightPanelSize !== prevState.rightPanelSize
   ) {
     debouncedSave(state)
   }

@@ -54,19 +54,26 @@ export function App() {
 
   const allTabs = useAppStore((s) => s.tabs)
   const activeTabId = useAppStore((s) => s.activeTabId)
-  const rightPanelMode = useAppStore((s) => s.rightPanelMode)
-  const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
+  const rightPanelOpenRecord = useAppStore((s) => s.rightPanelOpen)
+  const rightPanelSizeRecord = useAppStore((s) => s.rightPanelSize)
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
   const activeWorkspaceTabs = useAppStore((s) => s.activeWorkspaceTabs)
   const workspaces = useAppStore((s) => s.workspaces)
+  const projects = useAppStore((s) => s.projects)
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
   const settingsOpen = useAppStore((s) => s.settingsOpen)
   const automationsOpen = useAppStore((s) => s.automationsOpen)
   const quickOpenVisible = useAppStore((s) => s.quickOpenVisible)
+  const setRightPanelSize = useAppStore((s) => s.setRightPanelSize)
 
   const wsTabs = activeWorkspaceTabs()
   const activeTab = wsTabs.find((t) => t.id === activeTabId)
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
+  const project = workspace ? projects.find((p) => p.id === workspace.projectId) : null
+
+  // Derive project-specific panel state, falling back to defaults
+  const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : true
+  const rightPanelSize = project ? rightPanelSizeRecord[project.id] ?? 320 : 320
 
   // All terminal tabs across every workspace — kept alive to preserve PTY state
   const allTerminals = allTabs.filter((t): t is Extract<typeof t, { type: 'terminal' }> => t.type === 'terminal')
@@ -79,7 +86,18 @@ export function App() {
         ) : automationsOpen ? (
           <AutomationsPanel />
         ) : (
-          <Allotment>
+          <Allotment
+            onResize={(sizes) => {
+              // Determine the index of the Right Panel pane
+              // If sidebar is collapsed: [Center, Right] -> Right is index 1
+              // If sidebar is visible: [Sidebar, Center, Right] -> Right is index 2
+              const rightPanelIndex = sidebarCollapsed ? 1 : 2
+              const newRightPanelSize = sizes[rightPanelIndex]
+              if (newRightPanelSize && project) {
+                setRightPanelSize(newRightPanelSize)
+              }
+            }}
+          >
             {/* Sidebar */}
             {!sidebarCollapsed && (
               <Allotment.Pane minSize={160} maxSize={400} preferredSize={220}>
@@ -141,7 +159,7 @@ export function App() {
             <Allotment.Pane
               minSize={48}
               maxSize={rightPanelOpen ? 1000 : 48}
-              preferredSize={rightPanelOpen ? useAppStore.getState().settings.rightPanelSize : 48}
+              preferredSize={rightPanelOpen ? rightPanelSize : 48}
               snap={true}
             >
               <RightPanel />

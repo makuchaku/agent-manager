@@ -62,8 +62,6 @@ export interface Settings {
   terminalStartupCommand: string
   theme: Theme
   editorTheme: string
-  /** User-set right panel width in pixels (default: 320). Persists across sessions. */
-  rightPanelSize: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -78,7 +76,6 @@ export const DEFAULT_SETTINGS: Settings = {
   terminalStartupCommand: '',
   theme: 'dark',
   editorTheme: 'vs-dark',
-  rightPanelSize: 320, // Default width for Gemini / Files panels (pixels)
 }
 
 export interface Toast {
@@ -104,8 +101,12 @@ export interface AppState {
   activeWorkspaceId: string | null
   activeTabId: string | null
   lastActiveTabByWorkspace: Record<string, string>
-  rightPanelMode: RightPanelMode
-  rightPanelOpen: boolean
+  /** Per-project right panel mode. Falls back to 'gemini' if not set. */
+  rightPanelMode: Record<string, RightPanelMode>
+  /** Per-project right panel visibility. Falls back to true if not set. */
+  rightPanelOpen: Record<string, boolean>
+  /** Per-project right panel width in pixels. Falls back to 320 if not set. */
+  rightPanelSize: Record<string, number>
   sidebarCollapsed: boolean
   lastSavedTabId: string | null
   workspaceDialogProjectId: string | null
@@ -132,8 +133,12 @@ export interface AppState {
   setActiveTab: (id: string | null) => void
   moveTabInActiveWorkspace: (sourceTabId: string, targetTabId: string) => void
   setTerminalTitleFromCommand: (ptyId: string, command: string) => void
+  /** Sets the right panel mode for the currently active project. */
   setRightPanelMode: (mode: RightPanelMode) => void
+  /** Toggles the right panel visibility for the currently active project. */
   toggleRightPanel: () => void
+  /** Sets the right panel size for the currently active project. */
+  setRightPanelSize: (size: number) => void
   toggleSidebar: () => void
   nextTab: () => void
   prevTab: () => void
@@ -197,4 +202,7 @@ export interface PersistedState {
   activeTabId?: string | null
   lastActiveTabByWorkspace?: Record<string, string>
   settings?: Settings
+  rightPanelMode?: Record<string, RightPanelMode>
+  rightPanelOpen?: Record<string, boolean>
+  rightPanelSize?: Record<string, number>
 }
