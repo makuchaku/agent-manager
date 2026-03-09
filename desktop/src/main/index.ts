@@ -20,10 +20,10 @@ function triggerAutomationWakeCatchUp(reason: 'resume' | 'unlock-screen'): void 
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 900,
-    minHeight: 600,
+    // Window size defaults to monitor bounds when maximize is enabled.
+    // Fixed dimensions removed to allow full-screen maximize on startup.
+    minWidth: 1024,   // Fallback minimum for smaller monitors (increased from 900)
+    minHeight: 768,   // Fallback minimum for smaller monitors (increased from 600)
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
     backgroundColor: '#13141b',
@@ -35,12 +35,26 @@ function createWindow(): void {
       sandbox: false, // needed for node-pty IPC
       webviewTag: true, // needed for Gemini view
     },
+    maximize: true,  // Launch window in maximized state on all platforms
   })
 
-  // Show window when ready to avoid white flash (skip in tests)
+  /**
+   * Document window configuration options for other developers:
+   * - minWidth/minHeight: Minimum bounds enforced on all platforms. Set higher than
+   *   typical content area since maximize will fill the monitor regardless.
+   * - show: false — Prevents white flash during content loading. Window shows only after
+   *   'ready-to-show' event fires.
+   * - trafficLightPosition: Required for macOS when using hiddenInset titleBarStyle.
+   *   Positions the red/yellow/green buttons at screen coordinate (12, 12).
+   */
+
+  // Show window when ready and maximize to fill current monitor bounds.
+  // Called after content is fully loaded to avoid UI flicker or incomplete render.
+
   if (!process.env.CI_TEST) {
     mainWindow.on('ready-to-show', () => {
       mainWindow?.show()
+      mainWindow?.maximize() // Force maximized state on launch
     })
   }
 
