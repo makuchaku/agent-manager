@@ -72,51 +72,69 @@ if (process.env.CI_TEST) {
 app.whenReady().then(() => {
   const isDev = !!process.env.ELECTRON_RENDERER_URL
 
-  // Custom menu: keep standard Edit shortcuts (copy/paste/undo) but remove
-  // Cmd+W (close window) and Cmd+N (new window) so they reach the renderer
-  const menuTemplate: MenuItemConstructorOptions[] = [
-    {
-      label: app.name,
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
-      ],
-    },
-    ...(isDev
-      ? [{
-          label: 'View',
-          submenu: [
-            { role: 'reload' as const },
-            { role: 'forceReload' as const },
-            { type: 'separator' as const },
-            { role: 'toggleDevTools' as const },
-          ],
-        }]
-      : []),
-    {
-      label: 'Window',
-      submenu: [{ role: 'minimize' as const }, { role: 'zoom' as const }],
-    },
-  ]
-  const menu = Menu.buildFromTemplate(menuTemplate)
-  Menu.setApplicationMenu(menu)
+  // ============================================================================
+  // MENUBAR CONFIGURATION
+  // By default, the global Application Menubar is hidden to provide a cleaner
+  // desktop experience. Users can enable it via the ENABLE_MENUBAR environment
+  // variable for debugging or accessibility purposes.
+  //
+  // Environment Variable: ENABLE_MENUBAR
+  // Default: false (menubar hidden)
+  // Set value to "true" or "1" to show the menubar.
+  // ============================================================================
+  const menuEnabled = process.env.ENABLE_MENUBAR === 'true' || process.env.ENABLE_MENUBAR === '1'
+
+  if (!menuEnabled) {
+    // Hide the global Application Menubar entirely on all platforms (macOS, Windows, Linux)
+    // This removes the top-level menu items while keeping window controls and keyboard shortcuts functional
+    Menu.setApplicationMenu(null)
+  } else {
+    // Custom menu: keep standard Edit shortcuts (copy/paste/undo) but remove
+    // Cmd+W (close window) and Cmd+N (new window) so they reach the renderer
+    const menuTemplate: MenuItemConstructorOptions[] = [
+      {
+        label: app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' },
+        ],
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' },
+        ],
+      },
+      ...(isDev
+        ? [{
+            label: 'View',
+            submenu: [
+              { role: 'reload' as const },
+              { role: 'forceReload' as const },
+              { type: 'separator' as const },
+              { role: 'toggleDevTools' as const },
+            ],
+          }]
+        : []),
+      {
+        label: 'Window',
+        submenu: [{ role: 'minimize' as const }, { role: 'zoom' as const }],
+      },
+    ]
+    const menu = Menu.buildFromTemplate(menuTemplate)
+    Menu.setApplicationMenu(menu)
+  }
 
   registerIpcHandlers()
   powerMonitor.on('resume', () => triggerAutomationWakeCatchUp('resume'))
