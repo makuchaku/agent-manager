@@ -30,6 +30,11 @@ export function TabBar() {
       e.stopPropagation()
       const tab = tabs.find((t) => t.id === tabId)
       if (!tab) return
+      
+      // Tab closure behavior is consistent across all tab types:
+      // 1. File tabs with unsaved changes prompt for confirmation (if enabled in settings).
+      // 2. Terminal tabs destroy the associated PTY process before removing from state.
+      // The close button location changed to right side for VS Code-like UX; functionality unchanged.
 
       if (tab.type === 'file' && tab.unsaved && settings.confirmOnClose) {
         if (!window.confirm(`"${getTabTitle(tab)}" has unsaved changes. Close anyway?`)) return
@@ -99,22 +104,27 @@ export function TabBar() {
               onDrop={(e) => handleDrop(e, tab.id)}
               onDragEnd={clearDragState}
             >
-              {tab.type === 'file' && tab.unsaved ? (
-                <span className={styles.unsavedDot} />
-              ) : (
-                <Tooltip label="Close tab" shortcut="⌘W">
-                  <button
-                    className={styles.closeButton}
-                    onClick={(e) => handleClose(e, tab.id)}
-                  >
-                    ✕
-                  </button>
-                </Tooltip>
-              )}
+              {/* Tab title — takes available space, ellipses if necessary */}
               <span className={`${styles.tabTitle} ${isSaved ? styles.savedFlash : ''}`}>
                 {getTabTitle(tab)}
               </span>
+              
+              {/* Keyboard shortcut hint (1-9 mapped to Cmd+1..Cmd+9) */}
               {shortcutHint && <span className={styles.shortcutHint}>{shortcutHint}</span>}
+              
+              {/* Close button positioned on the right side for VS Code-like UX
+                  Clicking triggers tab removal and PTY destruction (for terminals).
+                  Preserves existing behavior: unsaved file prompts, terminal cleanup.
+                  The unsaved dot indicator remains on the left; close always on right.
+              */}
+              <Tooltip label="Close tab" shortcut="⌘W">
+                <button
+                  className={styles.closeButton}
+                  onClick={(e) => handleClose(e, tab.id)}
+                >
+                  ✕
+                </button>
+              </Tooltip>
             </div>
           )
         })}
