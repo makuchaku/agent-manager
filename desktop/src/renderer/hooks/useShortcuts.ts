@@ -138,15 +138,7 @@ export function useShortcuts() {
         if (!store.rightPanelOpen) store.toggleRightPanel()
         return
       }
-      // Cmd+Shift+G — changes panel (open if closed)
-      if (shift && !alt && e.code === 'KeyG') {
-        consume()
-        store.setRightPanelMode('changes')
-        if (!store.rightPanelOpen) store.toggleRightPanel()
-        return
-      }
-
-      // ── Focus ──
+       // ── Focus ──
       // Cmd+J — focus terminal (or create one)
       if (!shift && !alt && e.key === 'j') {
         consume()

@@ -64,19 +64,20 @@ export function RightPanel() {
           </button>
         </Tooltip>
 
-        <Tooltip label="Source Control" shortcut="⇧⌘G">
+        <Tooltip label="Changes" shortcut="⇧⌘G">
           <button
             className={`${styles.activityButton} ${rightPanelOpen && rightPanelMode === 'changes' ? styles.active : ''}`}
             onClick={() => handleToggle('changes')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="6" y1="3" x2="6" y2="15" />
-              <circle cx="18" cy="6" r="3" />
-              <circle cx="6" cy="18" r="3" />
-              <path d="M18 9a9 9 0 0 1-9 9" />
+              <circle cx="12" cy="12" r="4" />
+              <line x1="1.05" y1="12" x2="7" y2="12" />
+              <line x1="17.01" y1="12" x2="22.96" y2="12" />
             </svg>
           </button>
         </Tooltip>
+
+
       </div>
 
       {/* Main Content Area (Always mounted to prevent webview reload) */}

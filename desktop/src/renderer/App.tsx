@@ -24,6 +24,7 @@ export function App() {
   usePrStatusPoller()
 
   useEffect(() => {
+    if (!window.api?.agent) return
     const unsub = window.api.agent.onNotifyProject((projectId: string) => {
       const state = useAppStore.getState()
       if (projectId !== state.activeProjectId) {
@@ -33,30 +34,32 @@ export function App() {
     return unsub
   }, [])
 
-   useEffect(() => {
-     let prevActive = new Set<string>()
-     const unsub = window.api.agent.onActivityUpdate((projectIds: string[]) => {
-       const nextActive = new Set(projectIds)
-       const state = useAppStore.getState()
+  useEffect(() => {
+    if (!window.api?.agent) return
+    let prevActive = new Set<string>()
+    const unsub = window.api.agent.onActivityUpdate((projectIds: string[]) => {
+      const nextActive = new Set(projectIds)
+      const state = useAppStore.getState()
 
-       for (const projectId of prevActive) {
-         if (!nextActive.has(projectId) && projectId !== state.activeProjectId && state.projects.some((p) => p.id === projectId)) {
-           state.markProjectUnread(projectId)
-         }
-       }
+      for (const projectId of prevActive) {
+        if (!nextActive.has(projectId) && projectId !== state.activeProjectId && state.projects.some((p) => p.id === projectId)) {
+          state.markProjectUnread(projectId)
+        }
+      }
 
-       state.setActiveAgentProjects(projectIds)
-       prevActive = nextActive
-     })
-     return unsub
-   }, [])
+      state.setActiveAgentProjects(projectIds)
+      prevActive = nextActive
+    })
+    return unsub
+  }, [])
 
-   useEffect(() => {
-     const unsub = window.api.ui.onResetLayout(() => {
-       useAppStore.getState().resetUILayout()
-     })
-     return unsub
-   }, [])
+  useEffect(() => {
+    if (!window.api?.ui) return
+    const unsub = window.api.ui.onResetLayout(() => {
+      useAppStore.getState().resetUILayout()
+    })
+    return unsub
+  }, [])
 
    const allTabs = useAppStore((s) => s.tabs)
   const activeTabId = useAppStore((s) => s.activeTabId)

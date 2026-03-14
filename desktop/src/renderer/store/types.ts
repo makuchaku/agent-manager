@@ -61,12 +61,12 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultShell: '',
   restoreProject: true,
   diffInline: false,
-  terminalFontSize: 14,
-  editorFontSize: 13,
-  uiFontSize: 12,
-  terminalStartupCommand: '',
-  theme: 'dark',
-  editorTheme: 'vs-dark',
+  terminalFontSize: 22,
+  editorFontSize: 22,
+  uiFontSize: 18,
+  terminalStartupCommand: 'opencode',
+  theme: 'light',
+  editorTheme: 'vs',
 }
 
 export interface Toast {
