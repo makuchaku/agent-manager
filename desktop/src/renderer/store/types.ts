@@ -146,7 +146,8 @@ export interface AppState {
 
   markProjectUnread: (projectId: string) => void
   clearProjectUnread: (projectId: string) => void
-  setActiveAgentProjects: (projectIds: string[]) => void
+   setActiveAgentProjects: (projectIds: string[]) => void
+   resetUILayout: () => void
 
   setPrStatuses: (projectId: string, statuses: Record<string, PrInfo | null>) => void
   setGhAvailability: (projectId: string, available: boolean) => void

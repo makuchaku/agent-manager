@@ -3,6 +3,7 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
 import { catchUpAutomationsOnWake, registerIpcHandlers } from './ipc'
 import { NotificationWatcher } from './notification-watcher'
+import { IPC } from '../shared/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
 let notificationWatcher: NotificationWatcher | null = null
@@ -86,17 +87,17 @@ if (process.env.CI_TEST) {
 app.whenReady().then(() => {
   const isDev = !!process.env.ELECTRON_RENDERER_URL
 
-  // ============================================================================
-  // MENUBAR CONFIGURATION
-  // By default, the global Application Menubar is hidden to provide a cleaner
-  // desktop experience. Users can enable it via the ENABLE_MENUBAR environment
-  // variable for debugging or accessibility purposes.
-  //
-  // Environment Variable: ENABLE_MENUBAR
-  // Default: false (menubar hidden)
-  // Set value to "true" or "1" to show the menubar.
-  // ============================================================================
-  const menuEnabled = process.env.ENABLE_MENUBAR === 'true' || process.env.ENABLE_MENUBAR === '1'
+   // ============================================================================
+   // MENUBAR CONFIGURATION
+   // By default, the global Application Menubar is shown to provide standard
+   // desktop experience. Users can hide it via the ENABLE_MENUBAR environment
+   // variable for a cleaner interface.
+   //
+   // Environment Variable: ENABLE_MENUBAR
+   // Default: true (menubar shown)
+   // Set value to "false" or "0" to hide the menubar.
+   // ============================================================================
+   const menuEnabled = process.env.ENABLE_MENUBAR !== 'false' && process.env.ENABLE_MENUBAR !== '0'
 
   if (!menuEnabled) {
     // Hide the global Application Menubar entirely on all platforms (macOS, Windows, Linux)
@@ -130,17 +131,43 @@ app.whenReady().then(() => {
           { role: 'selectAll' },
         ],
       },
-      ...(isDev
-        ? [{
-            label: 'View',
-            submenu: [
-              { role: 'reload' as const },
-              { role: 'forceReload' as const },
-              { type: 'separator' as const },
-              { role: 'toggleDevTools' as const },
-            ],
-          }]
-        : []),
+       ...(isDev
+         ? [{
+             label: 'View',
+             submenu: [
+               { role: 'reload' as const },
+               { role: 'forceReload' as const },
+               { type: 'separator' as const },
+               { role: 'toggleDevTools' as const },
+               { type: 'separator' as const },
+               {
+                 label: 'Reset UI Layout',
+                 accelerator: 'CmdOrCtrl+Shift+0',
+                 click: () => {
+                   const focusedWindow = BrowserWindow.getFocusedWindow()
+                   if (focusedWindow) {
+                     focusedWindow.webContents.send(IPC.UI_RESET_LAYOUT)
+                   }
+                 },
+               },
+             ],
+           }]
+         : [{
+             label: 'View',
+             submenu: [
+               { type: 'separator' as const },
+               {
+                 label: 'Reset UI Layout',
+                 accelerator: 'CmdOrCtrl+Shift+0',
+                 click: () => {
+                   const focusedWindow = BrowserWindow.getFocusedWindow()
+                   if (focusedWindow) {
+                     focusedWindow.webContents.send(IPC.UI_RESET_LAYOUT)
+                   }
+                 },
+               },
+             ],
+           }]),
       {
         label: 'Window',
         submenu: [{ role: 'minimize' as const }, { role: 'zoom' as const }],

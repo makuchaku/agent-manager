@@ -137,25 +137,35 @@ const api = {
       ipcRenderer.invoke(IPC.PI_CHECK_ACTIVITY_EXTENSION),
   },
 
-  automations: {
-    create: (automation: AutomationConfig) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_CREATE, automation),
-    update: (automation: AutomationConfig) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_UPDATE, automation),
-    delete: (automationId: string) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_DELETE, automationId),
-    runNow: (automation: AutomationConfig) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_RUN_NOW, automation),
-    stop: (automationId: string) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_STOP, automationId),
-    onRunStarted: (callback: (data: AutomationRunStartedEvent) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, data: AutomationRunStartedEvent) => callback(data)
-      ipcRenderer.on(IPC.AUTOMATION_RUN_STARTED, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.AUTOMATION_RUN_STARTED, listener)
-      }
-    },
-  },
+   automations: {
+     create: (automation: AutomationConfig) =>
+       ipcRenderer.invoke(IPC.AUTOMATION_CREATE, automation),
+     update: (automation: AutomationConfig) =>
+       ipcRenderer.invoke(IPC.AUTOMATION_UPDATE, automation),
+     delete: (automationId: string) =>
+       ipcRenderer.invoke(IPC.AUTOMATION_DELETE, automationId),
+     runNow: (automation: AutomationConfig) =>
+       ipcRenderer.invoke(IPC.AUTOMATION_RUN_NOW, automation),
+     stop: (automationId: string) =>
+       ipcRenderer.invoke(IPC.AUTOMATION_STOP, automationId),
+     onRunStarted: (callback: (data: AutomationRunStartedEvent) => void) => {
+       const listener = (_event: Electron.IpcRendererEvent, data: AutomationRunStartedEvent) => callback(data)
+       ipcRenderer.on(IPC.AUTOMATION_RUN_STARTED, listener)
+       return () => {
+         ipcRenderer.removeListener(IPC.AUTOMATION_RUN_STARTED, listener)
+       }
+     },
+   },
+
+   ui: {
+     onResetLayout: (callback: () => void) => {
+       const listener = (_event: Electron.IpcRendererEvent) => callback()
+       ipcRenderer.on(IPC.UI_RESET_LAYOUT, listener)
+       return () => {
+         ipcRenderer.removeListener(IPC.UI_RESET_LAYOUT, listener)
+       }
+     },
+   },
 
   github: {
     getPrStatuses: (repoPath: string, branches: string[]) =>

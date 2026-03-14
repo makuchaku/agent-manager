@@ -204,7 +204,10 @@ export function Sidebar() {
                 >
                   ▶
                 </span>
-                <span className={styles.projectName}>{project.name}</span>
+                <div className={styles.projectInfo}>
+                  <span className={styles.projectTitle}>{project.name}</span>
+                  <span className={styles.projectSubtitle}>{project.repoPath}</span>
+                </div>
                 <Tooltip label="Project settings">
                   <button
                     className={styles.settingsBtn}

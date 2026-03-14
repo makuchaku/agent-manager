@@ -72,8 +72,11 @@ export const IPC = {
   // Clipboard operations
   CLIPBOARD_SAVE_IMAGE: 'clipboard:save-image',
 
-  // State persistence
-  STATE_SAVE: 'state:save',
-  STATE_SAVE_SYNC: 'state:save-sync',
-  STATE_LOAD: 'state:load',
+   // State persistence
+   STATE_SAVE: 'state:save',
+   STATE_SAVE_SYNC: 'state:save-sync',
+   STATE_LOAD: 'state:load',
+
+   // UI operations
+   UI_RESET_LAYOUT: 'ui:reset-layout',
 } as const

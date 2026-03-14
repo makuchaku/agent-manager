@@ -387,8 +387,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   dismissToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
-  toggleQuickOpen: () => set((s) => ({ quickOpenVisible: !s.quickOpenVisible })),
-  closeQuickOpen: () => set({ quickOpenVisible: false }),
+   toggleQuickOpen: () => set((s) => ({ quickOpenVisible: !s.quickOpenVisible })),
+   closeQuickOpen: () => set({ quickOpenVisible: false }),
+   
+   resetUILayout: () => set((s) => ({
+     sidebarCollapsed: false,
+     rightPanelMode: {},
+     rightPanelOpen: {},
+     rightPanelSize: {},
+   })),
 
   markProjectUnread: (projectId) =>
     set((s) => {

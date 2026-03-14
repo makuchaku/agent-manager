@@ -5,6 +5,7 @@ import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './RightPanel.module.css'
 
 export function RightPanel() {
+  // Test comment to verify edit works
   const rightPanelModeRecord = useAppStore((s) => s.rightPanelMode)
   const setRightPanelMode = useAppStore((s) => s.setRightPanelMode)
   const rightPanelOpenRecord = useAppStore((s) => s.rightPanelOpen)
@@ -115,30 +116,30 @@ export function RightPanel() {
             })}
           </div>
 
-           {/* Files/Changes Views */}
-           {!project && rightPanelMode !== 'gemini' ? (
-             <div className={styles.emptyState}>
-               <span className={styles.emptyIcon}>📁</span>
-               <span className={styles.emptyText}>
-                 Select a project to browse files
-               </span>
-             </div>
-           ) : (
-             <>
-               <div style={{ display: rightPanelMode === 'files' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                 {project && <FileTree repoPath={project.repoPath} isActive={rightPanelMode === 'files'} />}
-               </div>
-               <div style={{ display: rightPanelMode === 'changes' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                 {project && (
-                   <ChangedFiles
-                     repoPath={project.repoPath}
-                     projectId={project.id}
-                     isActive={rightPanelMode === 'changes'}
-                   />
-                 )}
-               </div>
-             </>
-           )}
+            {/* Files/Changes Views */}
+            {!project ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>📁</span>
+                <span className={styles.emptyText}>
+                  Select a project to browse files
+                </span>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: rightPanelMode === 'files' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                  {project && <FileTree repoPath={project.repoPath} isActive={rightPanelMode === 'files'} />}
+                </div>
+                <div style={{ display: rightPanelMode === 'changes' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                  {project && (
+                    <ChangedFiles
+                      repoPath={project.repoPath}
+                      projectId={project.id}
+                      isActive={rightPanelMode === 'changes'}
+                    />
+                  )}
+                </div>
+              </>
+            )}
         </div>
       </div>
     </div>

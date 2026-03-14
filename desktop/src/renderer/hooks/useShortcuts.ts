@@ -170,13 +170,21 @@ export function useShortcuts() {
         return
       }
 
-      // ── Settings ──
-      // Cmd+, — toggle settings
-      if (!shift && !alt && e.key === ',') {
-        consume()
-        store.toggleSettings()
-        return
-      }
+       // ── Settings ──
+       // Cmd+, — toggle settings
+       if (!shift && !alt && e.key === ',') {
+         consume()
+         store.toggleSettings()
+         return
+       }
+
+       // ── Layout Reset ──
+       // Cmd+Shift+0 — reset UI layout to default
+       if (shift && !alt && e.key === '0') {
+         consume()
+         store.resetUILayout()
+         return
+       }
 
       // ── Workspace creation ──
       // Cmd+N — new workspace dialog
