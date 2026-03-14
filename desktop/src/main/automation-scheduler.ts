@@ -14,9 +14,14 @@ interface AutomationRuntime {
   nextRunAt: number | null
 }
 
+interface RunningAutomation {
+  ptyId: string
+  originalBranch: string
+}
+
 export class AutomationScheduler {
   private jobs = new Map<string, AutomationRuntime>()
-  private activeRuns = new Map<string, string>()
+  private activeRuns = new Map<string, RunningAutomation>()
   private runLocks = new Set<string>()
   private ptyManager: PtyManager
 
@@ -107,16 +112,19 @@ export class AutomationScheduler {
 
   private async executeRun(config: AutomationConfig, reason: 'scheduled' | 'catchup' | 'manual'): Promise<boolean> {
     if (this.runLocks.has(config.id)) {
-      const activePtyId = this.activeRuns.get(config.id)
-      console.warn(`[automation] skipping ${reason} run for ${config.id}; previous run still active (${activePtyId})`)
+      const activeRun = this.activeRuns.get(config.id)
+      console.warn(`[automation] skipping ${reason} run for ${config.id}; previous run still active (${activeRun?.ptyId})`)
       return false
     }
     this.runLocks.add(config.id)
 
     let ptyId: string | null = null
+    let originalBranch = ''
     try {
       const win = BrowserWindow.getAllWindows()[0]
       if (!win) return false
+
+      originalBranch = await GitService.getCurrentBranch(config.repoPath)
 
       const sanitized = config.name
         .toLowerCase()
@@ -128,50 +136,67 @@ export class AutomationScheduler {
       const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
 
       const branch = `auto/${sanitized}/${timestamp}`
-      const wtName = `auto-${sanitized}-${timestamp}`
 
-      let worktreePath: string
       try {
-        worktreePath = await GitService.createWorktree(config.repoPath, wtName, branch, true)
+        await GitService.createBranch(config.repoPath, branch, originalBranch || undefined)
       } catch (err) {
-        console.error(`Failed to create worktree for automation ${config.id}:`, err)
+        const msg = err instanceof Error ? err.message : ''
+        if (!msg.includes('BRANCH_ALREADY_EXISTS')) {
+          console.error(`Failed to create branch for automation ${config.id}:`, err)
+          return false
+        }
+      }
+
+      try {
+        await GitService.checkoutBranch(config.repoPath, branch)
+      } catch (err) {
+        console.error(`Failed to checkout branch for automation ${config.id}:`, err)
         return false
       }
 
       try {
-        await trustPathForClaude(worktreePath)
+        await trustPathForClaude(config.repoPath)
       } catch {
         // non-fatal
       }
 
-      // Spawn a shell with initialWrite — writes the claude command as soon as
-      // the shell emits its first output (ready), no manual timeout needed.
       const shell = process.env.SHELL || '/bin/zsh'
       const escapedPrompt = config.prompt.replace(/'/g, "'\\''")
       const createdPtyId = this.ptyManager.create(
-        worktreePath,
+        config.repoPath,
         win.webContents,
         shell,
         undefined,
         `claude '${escapedPrompt}'\r`
       )
       ptyId = createdPtyId
-      this.activeRuns.set(config.id, createdPtyId)
-      this.ptyManager.onExit(createdPtyId, () => {
-        if (this.activeRuns.get(config.id) === createdPtyId) {
+
+      this.activeRuns.set(config.id, {
+        ptyId: createdPtyId,
+        originalBranch,
+      })
+
+      this.ptyManager.onExit(createdPtyId, async () => {
+        if (this.activeRuns.get(config.id)?.ptyId === createdPtyId) {
           this.activeRuns.delete(config.id)
         }
         this.runLocks.delete(config.id)
+
+        if (originalBranch) {
+          try {
+            await GitService.checkoutBranch(config.repoPath, originalBranch)
+          } catch (err) {
+            console.error(`Failed to restore branch ${originalBranch}:`, err)
+          }
+        }
       })
 
-      // Notify renderer to create workspace + terminal tab
       if (!win.isDestroyed()) {
         const event: AutomationRunStartedEvent = {
           automationId: config.id,
           automationName: config.name,
           projectId: config.projectId,
           ptyId: createdPtyId,
-          worktreePath,
           branch,
         }
         win.webContents.send(IPC.AUTOMATION_RUN_STARTED, event)

@@ -21,23 +21,14 @@ export interface Project {
   id: string
   name: string
   repoPath: string
+  branch: string
   startupCommands?: StartupCommand[]
   prLinkProvider?: PrLinkProvider
 }
 
-export interface Workspace {
-  id: string
-  name: string
-  branch: string
-  worktreePath: string
-  projectId: string
-  automationId?: string
-  isRoot?: boolean
-}
-
 export type Tab = {
   id: string
-  workspaceId: string
+  projectId: string
 } & (
   | { type: 'terminal'; title: string; ptyId: string }
   | { type: 'file'; filePath: string; unsaved?: boolean }
@@ -54,7 +45,7 @@ export interface Settings {
   confirmOnClose: boolean
   autoSaveOnBlur: boolean
   defaultShell: string
-  restoreWorkspace: boolean
+  restoreProject: boolean
   diffInline: boolean
   terminalFontSize: number
   editorFontSize: number
@@ -68,7 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   confirmOnClose: true,
   autoSaveOnBlur: false,
   defaultShell: '',
-  restoreWorkspace: true,
+  restoreProject: true,
   diffInline: false,
   terminalFontSize: 14,
   editorFontSize: 13,
@@ -93,72 +84,56 @@ export interface ConfirmDialogState {
 }
 
 export interface AppState {
-  // Data
   projects: Project[]
-  workspaces: Workspace[]
   tabs: Tab[]
   automations: Automation[]
-  activeWorkspaceId: string | null
+  activeProjectId: string | null
   activeTabId: string | null
-  lastActiveTabByWorkspace: Record<string, string>
-  /** Per-project right panel mode. Falls back to 'gemini' if not set. */
+  lastActiveTabByProject: Record<string, string>
   rightPanelMode: Record<string, RightPanelMode>
-  /** Per-project right panel visibility. Falls back to true if not set. */
   rightPanelOpen: Record<string, boolean>
-  /** Per-project right panel width in pixels. Falls back to 320 if not set. */
   rightPanelSize: Record<string, number>
   sidebarCollapsed: boolean
   lastSavedTabId: string | null
-  workspaceDialogProjectId: string | null
   settings: Settings
   settingsOpen: boolean
   automationsOpen: boolean
   confirmDialog: ConfirmDialogState | null
   toasts: Toast[]
   quickOpenVisible: boolean
-  unreadWorkspaceIds: Set<string>
-  activeAgentWorkspaceIds: Set<string>
+  unreadProjectIds: Set<string>
+  activeAgentProjectIds: Set<string>
   prStatusMap: Map<string, PrInfo | null>
   ghAvailability: Map<string, boolean>
 
-  // Actions
-  addProject: (project: Project) => void
-  addProjectWithRootWorkspace: (project: Project) => Promise<void>
+  addProject: (project: Project) => Promise<void>
   removeProject: (id: string) => void
-  addWorkspace: (workspace: Workspace) => void
-  removeWorkspace: (id: string) => void
-  setActiveWorkspace: (id: string | null) => void
+  updateProject: (id: string, partial: Partial<Omit<Project, 'id'>>) => void
+  deleteProject: (projectId: string) => Promise<void>
+  checkoutBranch: (projectId: string, branch: string) => Promise<void>
+  createBranch: (projectId: string, branch: string, baseBranch?: string) => Promise<void>
+
   addTab: (tab: Tab) => void
   removeTab: (id: string) => void
   setActiveTab: (id: string | null) => void
-  moveTabInActiveWorkspace: (sourceTabId: string, targetTabId: string) => void
+  moveTabInActiveProject: (sourceTabId: string, targetTabId: string) => void
   setTerminalTitleFromCommand: (ptyId: string, command: string) => void
-  /** Sets the right panel mode for the currently active project. */
   setRightPanelMode: (mode: RightPanelMode) => void
-  /** Toggles the right panel visibility for the currently active project. */
   toggleRightPanel: () => void
-  /** Sets the right panel size for the currently active project. */
   setRightPanelSize: (size: number) => void
   toggleSidebar: () => void
   nextTab: () => void
   prevTab: () => void
-  createTerminalForActiveWorkspace: () => Promise<void>
+  createTerminalForActiveProject: () => Promise<void>
   closeActiveTab: () => void
   setTabUnsaved: (tabId: string, unsaved: boolean) => void
   notifyTabSaved: (tabId: string) => void
   openFileTab: (filePath: string) => void
-  openDiffTab: (workspaceId: string) => void
-  nextWorkspace: () => void
-  prevWorkspace: () => void
+  openDiffTab: (projectId: string) => void
   switchToTabByIndex: (index: number) => void
-  closeAllWorkspaceTabs: () => void
+  closeAllProjectTabs: () => void
   focusOrCreateTerminal: () => Promise<void>
-  openWorkspaceDialog: (projectId: string | null) => void
-  renameWorkspace: (id: string, name: string) => void
-  updateWorkspaceBranch: (id: string, branch: string) => void
-  deleteWorkspace: (workspaceId: string) => Promise<void>
-  updateProject: (id: string, partial: Partial<Omit<Project, 'id'>>) => void
-  deleteProject: (projectId: string) => Promise<void>
+
   updateSettings: (partial: Partial<Settings>) => void
   toggleSettings: () => void
   toggleAutomations: () => void
@@ -169,38 +144,30 @@ export interface AppState {
   toggleQuickOpen: () => void
   closeQuickOpen: () => void
 
-  // Unread indicator actions
-  markWorkspaceUnread: (workspaceId: string) => void
-  clearWorkspaceUnread: (workspaceId: string) => void
+  markProjectUnread: (projectId: string) => void
+  clearProjectUnread: (projectId: string) => void
+  setActiveAgentProjects: (projectIds: string[]) => void
 
-  // Agent activity actions (all integrations)
-  setActiveAgentWorkspaces: (workspaceIds: string[]) => void
-
-  // PR status actions
   setPrStatuses: (projectId: string, statuses: Record<string, PrInfo | null>) => void
   setGhAvailability: (projectId: string, available: boolean) => void
 
-  // Automation actions
   addAutomation: (automation: Automation) => void
   updateAutomation: (id: string, partial: Partial<Omit<Automation, 'id'>>) => void
   removeAutomation: (id: string) => void
 
-  // Hydration
   hydrateState: (data: PersistedState) => void
 
-  // Derived
-  activeWorkspaceTabs: () => Tab[]
+  activeProjectTabs: () => Tab[]
   activeProject: () => Project | undefined
 }
 
 export interface PersistedState {
   projects: Project[]
-  workspaces: Workspace[]
   tabs?: Tab[]
   automations?: Automation[]
-  activeWorkspaceId?: string | null
+  activeProjectId?: string | null
   activeTabId?: string | null
-  lastActiveTabByWorkspace?: Record<string, string>
+  lastActiveTabByProject?: Record<string, string>
   settings?: Settings
   rightPanelMode?: Record<string, RightPanelMode>
   rightPanelOpen?: Record<string, boolean>

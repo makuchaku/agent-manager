@@ -16,37 +16,36 @@ import { useShortcuts } from './hooks/useShortcuts'
 import { usePrStatusPoller } from './hooks/usePrStatusPoller'
 import styles from './App.module.css'
 
+console.log('[App] Component definition loaded')
+
 export function App() {
+  console.log('[App] App component rendering...')
   useShortcuts()
   usePrStatusPoller()
 
-  // Listen for workspace notification signals from agent adapters/hooks.
   useEffect(() => {
-    const unsub = window.api.agent.onNotifyWorkspace((workspaceId: string) => {
+    const unsub = window.api.agent.onNotifyProject((projectId: string) => {
       const state = useAppStore.getState()
-      if (workspaceId !== state.activeWorkspaceId) {
-        state.markWorkspaceUnread(workspaceId)
+      if (projectId !== state.activeProjectId) {
+        state.markProjectUnread(projectId)
       }
     })
     return unsub
   }, [])
 
-  // Listen for active agent workspace updates.
   useEffect(() => {
     let prevActive = new Set<string>()
-    const unsub = window.api.agent.onActivityUpdate((workspaceIds: string[]) => {
-      const nextActive = new Set(workspaceIds)
+    const unsub = window.api.agent.onActivityUpdate((projectIds: string[]) => {
+      const nextActive = new Set(projectIds)
       const state = useAppStore.getState()
 
-      // Fallback unread signal on activity completion:
-      // if a workspace was active and is now inactive, mark unread unless it's open.
-      for (const wsId of prevActive) {
-        if (!nextActive.has(wsId) && wsId !== state.activeWorkspaceId && state.workspaces.some((w) => w.id === wsId)) {
-          state.markWorkspaceUnread(wsId)
+      for (const projectId of prevActive) {
+        if (!nextActive.has(projectId) && projectId !== state.activeProjectId && state.projects.some((p) => p.id === projectId)) {
+          state.markProjectUnread(projectId)
         }
       }
 
-      state.setActiveAgentWorkspaces(workspaceIds)
+      state.setActiveAgentProjects(projectIds)
       prevActive = nextActive
     })
     return unsub
@@ -57,25 +56,25 @@ export function App() {
   const rightPanelOpenRecord = useAppStore((s) => s.rightPanelOpen)
   const rightPanelSizeRecord = useAppStore((s) => s.rightPanelSize)
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
-  const activeWorkspaceTabs = useAppStore((s) => s.activeWorkspaceTabs)
-  const workspaces = useAppStore((s) => s.workspaces)
+  const activeProjectTabs = useAppStore((s) => s.activeProjectTabs)
   const projects = useAppStore((s) => s.projects)
-  const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
+  const activeProjectId = useAppStore((s) => s.activeProjectId)
   const settingsOpen = useAppStore((s) => s.settingsOpen)
   const automationsOpen = useAppStore((s) => s.automationsOpen)
   const quickOpenVisible = useAppStore((s) => s.quickOpenVisible)
   const setRightPanelSize = useAppStore((s) => s.setRightPanelSize)
 
-  const wsTabs = activeWorkspaceTabs()
-  const activeTab = wsTabs.find((t) => t.id === activeTabId)
-  const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
-  const project = workspace ? projects.find((p) => p.id === workspace.projectId) : null
+  console.log('[App] State: projects count:', projects.length, ', activeProjectId:', activeProjectId, ', activeTabId:', activeTabId)
 
-  // Derive project-specific panel state, falling back to defaults
+  const projectTabs = activeProjectTabs()
+  const activeTab = projectTabs.find((t) => t.id === activeTabId)
+  const project = projects.find((p) => p.id === activeProjectId)
+
+  console.log('[App] projectTabs count:', projectTabs.length, ', activeTab:', activeTab ? 'yes' : 'no', ', project:', project ? project.name : 'none')
+
   const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : true
   const rightPanelSize = project ? rightPanelSizeRecord[project.id] ?? 320 : 320
 
-  // All terminal tabs across every workspace — kept alive to preserve PTY state
   const allTerminals = allTabs.filter((t): t is Extract<typeof t, { type: 'terminal' }> => t.type === 'terminal')
 
   return (
@@ -88,9 +87,6 @@ export function App() {
         ) : (
           <Allotment
             onResize={(sizes) => {
-              // Determine the index of the Right Panel pane
-              // If sidebar is collapsed: [Center, Right] -> Right is index 1
-              // If sidebar is visible: [Sidebar, Center, Right] -> Right is index 2
               const rightPanelIndex = sidebarCollapsed ? 1 : 2
               const newRightPanelSize = sizes[rightPanelIndex]
               if (newRightPanelSize && project) {
@@ -98,20 +94,16 @@ export function App() {
               }
             }}
           >
-            {/* Sidebar */}
             {!sidebarCollapsed && (
               <Allotment.Pane minSize={160} maxSize={400} preferredSize={220}>
                 <Sidebar />
               </Allotment.Pane>
             )}
 
-            {/* Center */}
             <Allotment.Pane>
               <div className={styles.centerPanel}>
                 <TabBar />
                 <div className={styles.contentArea}>
-                  {/* Keep ALL terminal panels alive across workspaces so PTY
-                      state (scrollback, TUI layout) is never lost */}
                   {allTerminals.map((t) => (
                     <TerminalPanel
                       key={t.id}
@@ -131,7 +123,6 @@ export function App() {
                     </div>
                   ) : (
                     <>
-                      {/* Render active file editor */}
                       {activeTab?.type === 'file' && (
                         <FileEditor
                           key={activeTab.id}
@@ -141,11 +132,10 @@ export function App() {
                         />
                       )}
 
-                      {/* Render active diff viewer */}
-                      {activeTab?.type === 'diff' && workspace && (
+                      {activeTab?.type === 'diff' && project && (
                         <DiffViewer
                           key={activeTab.id}
-                          worktreePath={workspace.worktreePath}
+                          repoPath={project.repoPath}
                           active={true}
                         />
                       )}
@@ -155,7 +145,6 @@ export function App() {
               </div>
             </Allotment.Pane>
 
-            {/* Right Panel (Activity Bar + Sidebar Content) */}
             <Allotment.Pane
               minSize={48}
               maxSize={rightPanelOpen ? 1000 : 48}
@@ -167,8 +156,8 @@ export function App() {
           </Allotment>
         )}
       </div>
-      {quickOpenVisible && workspace && (
-        <QuickOpen worktreePath={workspace.worktreePath} />
+      {quickOpenVisible && project && (
+        <QuickOpen repoPath={project.repoPath} />
       )}
       <ToastContainer />
     </div>

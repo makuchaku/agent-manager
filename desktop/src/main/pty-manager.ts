@@ -14,7 +14,7 @@ interface PtyInstance {
   outputSeq: number
   replayChunks: string[]
   replayChars: number
-  workspaceId?: string
+  projectId?: string
   agentSessionId: string
   codexPromptBuffer: string
   codexAwaitingAnswer: boolean
@@ -195,7 +195,7 @@ export class PtyManager {
       outputSeq: 0,
       replayChunks: [],
       replayChars: 0,
-      workspaceId: extraEnv?.AGENT_ORCH_WS_ID,
+      projectId: extraEnv?.AGENT_ORCH_PROJECT_ID,
       agentSessionId,
       codexPromptBuffer: '',
       codexAwaitingAnswer: false,
@@ -234,7 +234,7 @@ export class PtyManager {
       if (instance.codexTurnActive) {
         instance.codexTurnActive = false
         this.emitTurnEvent(
-          instance.workspaceId,
+          instance.projectId,
           'codex',
           'awaiting_user',
           instance.agentSessionId,
@@ -249,7 +249,7 @@ export class PtyManager {
           instance.crushSilenceTimer = null
         }
         this.emitTurnEvent(
-          instance.workspaceId,
+          instance.projectId,
           'crush',
           'awaiting_user',
           instance.agentSessionId,
@@ -278,17 +278,17 @@ export class PtyManager {
     // when Enter is sent while a Codex process is already running in this PTY.
     // Crush (by Charm) is a TUI agent with no hook system — use the same
     // process-tree detection approach.
-    if (instance.workspaceId && /[\r\n]/.test(data)) {
+    if (instance.projectId && /[\r\n]/.test(data)) {
       if (this.isCodexRunningUnder(instance.process.pid)) {
         instance.codexPromptBuffer = ''
         instance.codexAwaitingAnswer = false
         if (!instance.codexTurnActive) {
           instance.codexTurnActive = true
-          this.emitTurnEvent(instance.workspaceId, 'codex', 'turn_started', instance.agentSessionId)
+          this.emitTurnEvent(instance.projectId, 'codex', 'turn_started', instance.agentSessionId)
         }
       } else if (!instance.crushTurnActive && this.isCrushRunningUnder(instance.process.pid)) {
         instance.crushTurnActive = true
-        this.emitTurnEvent(instance.workspaceId, 'crush', 'turn_started', instance.agentSessionId)
+        this.emitTurnEvent(instance.projectId, 'crush', 'turn_started', instance.agentSessionId)
       }
     }
 
@@ -374,18 +374,18 @@ export class PtyManager {
   }
 
   private emitTurnEvent(
-    workspaceId: string | undefined,
+    projectId: string | undefined,
     agent: string,
     type: AgentTurnEventType,
     sessionId?: string,
     outcome?: AgentTurnOutcome,
   ): void {
-    if (!workspaceId) return
-    emitAgentTurnEvent({ workspaceId, agent, type, sessionId, outcome })
+    if (!projectId) return
+    emitAgentTurnEvent({ projectId, agent, type, sessionId, outcome })
   }
 
   private handlePiMonoJsonOutput(instance: PtyInstance, data: string): void {
-    if (!instance.workspaceId || !data) return
+    if (!instance.projectId || !data) return
 
     instance.agentEventLineBuffer = `${instance.agentEventLineBuffer}${data}`
     if (instance.agentEventLineBuffer.length > AGENT_EVENT_LINE_BUFFER_MAX) {
@@ -427,25 +427,25 @@ export class PtyManager {
 
       if (type === 'turn_start') {
         instance.piMonoTurnActive = true
-        this.emitTurnEvent(instance.workspaceId, 'pi-mono', 'turn_started', instance.agentSessionId)
+        this.emitTurnEvent(instance.projectId, 'pi-mono', 'turn_started', instance.agentSessionId)
         continue
       }
 
       if (type === 'turn_end') {
         instance.piMonoTurnActive = false
-        this.emitTurnEvent(instance.workspaceId, 'pi-mono', 'awaiting_user', instance.agentSessionId, 'success')
+        this.emitTurnEvent(instance.projectId, 'pi-mono', 'awaiting_user', instance.agentSessionId, 'success')
         continue
       }
 
       if (type === 'agent_end' && instance.piMonoTurnActive) {
         instance.piMonoTurnActive = false
-        this.emitTurnEvent(instance.workspaceId, 'pi-mono', 'awaiting_user', instance.agentSessionId, 'success')
+        this.emitTurnEvent(instance.projectId, 'pi-mono', 'awaiting_user', instance.agentSessionId, 'success')
       }
     }
   }
 
   private handleCodexQuestionPrompt(instance: PtyInstance, data: string): void {
-    if (!instance.workspaceId) return
+    if (!instance.projectId) return
     if (instance.codexAwaitingAnswer) return
 
     const normalized = stripAnsiSequences(data)
@@ -461,16 +461,16 @@ export class PtyManager {
     instance.codexAwaitingAnswer = true
     instance.codexPromptBuffer = ''
     instance.codexTurnActive = false
-    this.emitTurnEvent(instance.workspaceId, 'codex', 'awaiting_user', instance.agentSessionId)
+    this.emitTurnEvent(instance.projectId, 'codex', 'awaiting_user', instance.agentSessionId)
   }
 
   private handleCodexProcessCompletion(instance: PtyInstance): void {
-    if (!instance.workspaceId) return
+    if (!instance.projectId) return
     if (!instance.codexTurnActive) return
     if (this.isCodexRunningUnder(instance.process.pid)) return
 
     instance.codexTurnActive = false
-    this.emitTurnEvent(instance.workspaceId, 'codex', 'awaiting_user', instance.agentSessionId, 'success')
+    this.emitTurnEvent(instance.projectId, 'codex', 'awaiting_user', instance.agentSessionId, 'success')
   }
 
   /** Crush is a persistent Bubbletea TUI that renders continuously even when
@@ -484,7 +484,7 @@ export class PtyManager {
    *  If the timer fires prematurely (e.g. during a long API spinner) and
    *  varied output resumes, the turn is automatically re-armed. */
   private handleCrushTurnSilence(instance: PtyInstance, data: string): void {
-    if (!instance.workspaceId) return
+    if (!instance.projectId) return
 
     if (instance.crushTurnActive) {
       const prev = instance.crushPrevDataSize
@@ -502,7 +502,7 @@ export class PtyManager {
         instance.crushSilenceTimer = null
         instance.crushPrevDataSize = -1
         instance.crushLastTurnEndedAt = Date.now()
-        this.emitTurnEvent(instance.workspaceId, 'crush', 'awaiting_user', instance.agentSessionId, 'success')
+        this.emitTurnEvent(instance.projectId, 'crush', 'awaiting_user', instance.agentSessionId, 'success')
       }, CRUSH_SILENCE_MS)
       return
     }
@@ -523,7 +523,7 @@ export class PtyManager {
     if (!this.isCrushRunningUnder(instance.process.pid)) return
 
     instance.crushTurnActive = true
-    this.emitTurnEvent(instance.workspaceId, 'crush', 'turn_started', instance.agentSessionId)
+    this.emitTurnEvent(instance.projectId, 'crush', 'turn_started', instance.agentSessionId)
   }
 
   /** Update the webContents reference for an existing PTY (e.g. after renderer reload) */

@@ -2,11 +2,6 @@
 
 export const IPC = {
   // Git operations
-  GIT_LIST_WORKTREES: 'git:list-worktrees',
-  GIT_CREATE_WORKTREE: 'git:create-worktree',
-  GIT_CREATE_WORKTREE_FROM_PR: 'git:create-worktree-from-pr',
-  GIT_CREATE_WORKTREE_PROGRESS: 'git:create-worktree-progress',
-  GIT_REMOVE_WORKTREE: 'git:remove-worktree',
   GIT_GET_STATUS: 'git:get-status',
   GIT_GET_DIFF: 'git:get-diff',
   GIT_GET_FILE_DIFF: 'git:get-file-diff',
@@ -17,6 +12,8 @@ export const IPC = {
   GIT_COMMIT: 'git:commit',
   GIT_GET_CURRENT_BRANCH: 'git:get-current-branch',
   GIT_GET_DEFAULT_BRANCH: 'git:get-default-branch',
+  GIT_CHECKOUT_BRANCH: 'git:checkout-branch',
+  GIT_CREATE_BRANCH: 'git:create-branch',
 
   // PTY operations
   PTY_CREATE: 'pty:create',
@@ -41,7 +38,7 @@ export const IPC = {
   APP_ADD_PROJECT_PATH: 'app:add-project-path',
 
   // Agent activity integration
-  AGENT_NOTIFY_WORKSPACE: 'agent:notify-workspace',
+  AGENT_NOTIFY_PROJECT: 'agent:notify-project',
   AGENT_ACTIVITY_UPDATE: 'agent:activity-update',
 
   // Claude Code integration

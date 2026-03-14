@@ -21,18 +21,18 @@ import { join } from "node:path";
 type AgentTurnType = "turn_started" | "awaiting_user";
 type AgentTurnOutcome = "success" | "failed";
 
-const WS_ID = process.env.AGENT_ORCH_WS_ID?.trim();
+const PROJECT_ID = process.env.AGENT_ORCH_PROJECT_ID?.trim();
 const SESSION_ID = process.env.AGENT_ORCH_SESSION_ID?.trim();
 const EVENT_DIR = process.env.MAKULABS_MANAGER_AGENT_EVENT_DIR || "/tmp/makulabs-manager-agent-events";
 
 function emit(type: AgentTurnType, outcome?: AgentTurnOutcome): void {
-  if (!WS_ID) return;
+  if (!PROJECT_ID) return;
 
   try {
     mkdirSync(EVENT_DIR, { recursive: true });
     const event: {
       schema: 1;
-      workspaceId: string;
+      projectId: string;
       agent: string;
       type: AgentTurnType;
       outcome?: AgentTurnOutcome;
@@ -40,7 +40,7 @@ function emit(type: AgentTurnType, outcome?: AgentTurnOutcome): void {
       at: number;
     } = {
       schema: 1,
-      workspaceId: WS_ID,
+      projectId: PROJECT_ID,
       agent: "pi-mono",
       type,
       sessionId: SESSION_ID,
@@ -59,7 +59,7 @@ function emit(type: AgentTurnType, outcome?: AgentTurnOutcome): void {
 }
 
 export default function(pi: ExtensionAPI) {
-  if (!WS_ID) return;
+  if (!PROJECT_ID) return;
 
   pi.on("agent_start", async () => {
     emit("turn_started");

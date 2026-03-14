@@ -5,7 +5,7 @@ import type { AgentTurnEvent, AgentTurnEventType, AgentTurnOutcome } from '../sh
 const DEFAULT_AGENT_EVENT_DIR = '/tmp/makulabs-manager-agent-events'
 
 interface EmitAgentTurnEventInput {
-  workspaceId: string
+  projectId: string
   agent: string
   type: AgentTurnEventType
   outcome?: AgentTurnOutcome
@@ -18,13 +18,13 @@ export function getAgentEventDir(): string {
 }
 
 export function emitAgentTurnEvent(input: EmitAgentTurnEventInput): void {
-  const workspaceId = input.workspaceId.trim()
+  const projectId = input.projectId.trim()
   const agent = input.agent.trim()
-  if (!workspaceId || !agent) return
+  if (!projectId || !agent) return
 
   const event: AgentTurnEvent = {
     schema: 1,
-    workspaceId,
+    projectId,
     agent,
     type: input.type,
     outcome: input.outcome,

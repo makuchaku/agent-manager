@@ -90,8 +90,8 @@ export class NotificationWatcher {
   }
 
   private normalizeEvent(parsed: Partial<AgentTurnEvent>): AgentTurnEvent | null {
-    const workspaceId = typeof parsed.workspaceId === 'string' ? parsed.workspaceId.trim() : ''
-    if (!workspaceId) return null
+    const projectId = typeof parsed.projectId === 'string' ? parsed.projectId.trim() : ''
+    if (!projectId) return null
 
     const type = typeof parsed.type === 'string' ? parsed.type.trim() : ''
     if (!isTurnEventType(type)) return null
@@ -110,7 +110,7 @@ export class NotificationWatcher {
 
     return {
       schema: 1,
-      workspaceId,
+      projectId,
       type,
       outcome: type === 'awaiting_user' ? outcome : undefined,
       agent,
@@ -120,29 +120,29 @@ export class NotificationWatcher {
   }
 
   private applyEvent(event: AgentTurnEvent): void {
-    const { workspaceId, agent, type, sessionId } = event
+    const { projectId, agent, type, sessionId } = event
 
     if (type === 'turn_started') {
-      this.addActiveSession(workspaceId, this.sessionKey(agent, sessionId))
+      this.addActiveSession(projectId, this.sessionKey(agent, sessionId))
       return
     }
 
-    this.removeActiveSession(workspaceId, agent, sessionId)
-    this.notifyRenderer(workspaceId)
+    this.removeActiveSession(projectId, agent, sessionId)
+    this.notifyRenderer(projectId)
   }
 
-  private addActiveSession(workspaceId: string, key: string): void {
-    const sessions = this.activeEventSessions.get(workspaceId)
+  private addActiveSession(projectId: string, key: string): void {
+    const sessions = this.activeEventSessions.get(projectId)
     if (sessions) {
       sessions.add(key)
       return
     }
 
-    this.activeEventSessions.set(workspaceId, new Set([key]))
+    this.activeEventSessions.set(projectId, new Set([key]))
   }
 
-  private removeActiveSession(workspaceId: string, agent: string, sessionId?: string): void {
-    const sessions = this.activeEventSessions.get(workspaceId)
+  private removeActiveSession(projectId: string, agent: string, sessionId?: string): void {
+    const sessions = this.activeEventSessions.get(projectId)
     if (!sessions) return
 
     if (sessionId) {
@@ -156,7 +156,7 @@ export class NotificationWatcher {
     }
 
     if (sessions.size === 0) {
-      this.activeEventSessions.delete(workspaceId)
+      this.activeEventSessions.delete(projectId)
     }
   }
 
@@ -166,25 +166,22 @@ export class NotificationWatcher {
 
   private publishActivity(): void {
     const nextActive = new Set<string>()
-    for (const [workspaceId, sessions] of this.activeEventSessions.entries()) {
-      if (sessions.size > 0) nextActive.add(workspaceId)
+    for (const [projectId, sessions] of this.activeEventSessions.entries()) {
+      if (sessions.size > 0) nextActive.add(projectId)
     }
 
     if (this.equalSets(nextActive, this.lastPublishedActiveIds)) return
 
     const becameInactive: string[] = []
-    for (const wsId of this.lastPublishedActiveIds) {
-      if (!nextActive.has(wsId)) becameInactive.push(wsId)
+    for (const projectId of this.lastPublishedActiveIds) {
+      if (!nextActive.has(projectId)) becameInactive.push(projectId)
     }
 
     this.lastPublishedActiveIds = nextActive
     this.sendActivity(Array.from(nextActive).sort())
 
-    // Fallback completion signal: if a workspace was active and now is not,
-    // emit a notify event so renderer can show unread attention dots even when
-    // explicit awaiting_user events are missed.
-    for (const wsId of becameInactive) {
-      this.notifyRenderer(wsId)
+    for (const projectId of becameInactive) {
+      this.notifyRenderer(projectId)
     }
   }
 
@@ -196,18 +193,18 @@ export class NotificationWatcher {
     return true
   }
 
-  private notifyRenderer(workspaceId: string): void {
+  private notifyRenderer(projectId: string): void {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) {
-        win.webContents.send(IPC.AGENT_NOTIFY_WORKSPACE, workspaceId)
+        win.webContents.send(IPC.AGENT_NOTIFY_PROJECT, projectId)
       }
     }
   }
 
-  private sendActivity(workspaceIds: string[]): void {
+  private sendActivity(projectIds: string[]): void {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) {
-        win.webContents.send(IPC.AGENT_ACTIVITY_UPDATE, workspaceIds)
+        win.webContents.send(IPC.AGENT_ACTIVITY_UPDATE, projectIds)
       }
     }
   }

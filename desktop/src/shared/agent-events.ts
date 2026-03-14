@@ -4,7 +4,7 @@ export type AgentTurnOutcome = 'success' | 'failed'
 
 export interface AgentTurnEvent {
   schema: 1
-  workspaceId: string
+  projectId: string
   agent: string
   type: AgentTurnEventType
   outcome?: AgentTurnOutcome

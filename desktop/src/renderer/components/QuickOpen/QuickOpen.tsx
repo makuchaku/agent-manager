@@ -16,7 +16,7 @@ interface FileNode {
 }
 
 interface Props {
-  worktreePath: string
+  repoPath: string
 }
 
 function flattenTree(nodes: FileNode[], basePath: string): FileEntry[] {
@@ -79,7 +79,7 @@ function HighlightedPath({ text, indices }: { text: string; indices: number[] })
   )
 }
 
-export function QuickOpen({ worktreePath }: Props) {
+export function QuickOpen({ repoPath }: Props) {
   const [query, setQuery] = useState('')
   const [files, setFiles] = useState<FileEntry[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -91,11 +91,11 @@ export function QuickOpen({ worktreePath }: Props) {
   // Load file tree on mount
   useEffect(() => {
     let cancelled = false
-    window.api.fs.getTree(worktreePath).then((nodes: FileNode[]) => {
-      if (!cancelled) setFiles(flattenTree(nodes, worktreePath))
+    window.api.fs.getTree(repoPath).then((nodes: FileNode[]) => {
+      if (!cancelled) setFiles(flattenTree(nodes, repoPath))
     }).catch(() => {})
     return () => { cancelled = true }
-  }, [worktreePath])
+  }, [repoPath])
 
   // Filter + fuzzy match
   const filtered = useMemo(() => {

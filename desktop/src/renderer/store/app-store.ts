@@ -8,37 +8,34 @@ const DEFAULT_PR_LINK_PROVIDER = 'github' as const
 function executeTerminalStartupCommand(ptyId: string, command: string) {
   if (!command.trim()) return
   setTimeout(() => {
-    // Adding '\r\n' simulates pressing Enter to execute the command
     window.api.pty.write(ptyId, command + '\r\n')
   }, 500)
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
-  workspaces: [],
   tabs: [],
   automations: [],
-  activeWorkspaceId: null,
+  activeProjectId: null,
   activeTabId: null,
-  lastActiveTabByWorkspace: {},
+  lastActiveTabByProject: {},
   rightPanelMode: {},
   rightPanelOpen: {},
   rightPanelSize: {},
   sidebarCollapsed: false,
   lastSavedTabId: null,
-  workspaceDialogProjectId: null,
   settings: { ...DEFAULT_SETTINGS },
   settingsOpen: false,
   automationsOpen: false,
   confirmDialog: null,
   toasts: [],
   quickOpenVisible: false,
-  unreadWorkspaceIds: new Set<string>(),
-  activeAgentWorkspaceIds: new Set<string>(),
+  unreadProjectIds: new Set<string>(),
+  activeAgentProjectIds: new Set<string>(),
   prStatusMap: new Map(),
   ghAvailability: new Map(),
 
-  addProject: (project) =>
+  addProject: async (project) => {
     set((s) => ({
       projects: [
         ...s.projects,
@@ -47,213 +44,72 @@ export const useAppStore = create<AppState>((set, get) => ({
           prLinkProvider: project.prLinkProvider ?? DEFAULT_PR_LINK_PROVIDER,
         },
       ],
-    })),
-
-  addProjectWithRootWorkspace: async (project) => {
-    try {
-      get().addProject(project)
-
-      let branch = ''
-      try {
-        branch = await window.api.git.getCurrentBranch(project.repoPath)
-      } catch { /* fallback to empty */ }
-
-      const wsId = crypto.randomUUID()
-      // Insert workspace first, then activate it via setActiveWorkspace so activeTabId stays coherent
-      // even if terminal creation fails.
-      set((s) => ({
-        workspaces: [
-          ...s.workspaces,
-          {
-            id: wsId,
-            name: project.name,
-            branch,
-            worktreePath: project.repoPath,
-            projectId: project.id,
-            isRoot: true,
-          },
-        ],
-      }))
-      get().setActiveWorkspace(wsId)
-
-      const commands = project.startupCommands ?? []
-      const shell = get().settings.defaultShell || undefined
-
-      if (commands.length === 0) {
-        try {
-          const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_WS_ID: wsId })
-          get().addTab({
-            id: crypto.randomUUID(),
-            workspaceId: wsId,
-            type: 'terminal',
-            title: 'Terminal',
-            ptyId,
-          })
-          const startupCmd = get().settings.terminalStartupCommand
-          if (startupCmd) {
-            executeTerminalStartupCommand(ptyId, startupCmd)
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Failed to start terminal'
-          console.error('Failed to create PTY for new project:', err)
-          get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
-        }
-      } else {
-        // Pre-trust worktree in Claude Code if any command uses claude
-        if (commands.some((c) => c.command.trim().startsWith('claude'))) {
-          await window.api.claude.trustPath(project.repoPath).catch(() => {})
-        }
-        let firstTabId: string | null = null
-        let failures = 0
-        let lastFailureMsg = ''
-        for (const cmd of commands) {
-          try {
-            const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_WS_ID: wsId })
-            const tabId = crypto.randomUUID()
-            if (!firstTabId) firstTabId = tabId
-            get().addTab({
-              id: tabId,
-              workspaceId: wsId,
-              type: 'terminal',
-              title: cmd.name || cmd.command,
-              ptyId,
-            })
-            setTimeout(() => {
-              window.api.pty.write(ptyId, cmd.command + '\n')
-            }, 500)
-          } catch (err) {
-            failures++
-            lastFailureMsg = err instanceof Error ? err.message : 'Failed to start terminal'
-            console.error('Failed to create PTY for startup command:', cmd, err)
-          }
-        }
-        if (firstTabId) get().setActiveTab(firstTabId)
-        if (failures > 0) {
-          const msg = failures === commands.length
-            ? `Failed to start terminals: ${lastFailureMsg}`
-            : `Started some terminals, but ${failures} failed: ${lastFailureMsg}`
-          get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
-        }
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to add project'
-      console.error('Failed to add project with root workspace:', err)
-      get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
-    }
+    }))
   },
 
   removeProject: (id) =>
     set((s) => {
-      // Clean up automations for this project in main process
       const projectAutomations = s.automations.filter((a) => a.projectId === id)
       for (const a of projectAutomations) {
         window.api.automations.delete(a.id)
       }
-      const removedWsIds = new Set(s.workspaces.filter((w) => w.projectId === id).map((w) => w.id))
       const newProjects = s.projects.filter((p) => p.id !== id)
-      const newWorkspaces = s.workspaces.filter((w) => w.projectId !== id)
-      const newTabs = s.tabs.filter((t) => !removedWsIds.has(t.workspaceId))
+      const newTabs = s.tabs.filter((t) => t.projectId !== id)
       const newAutomations = s.automations.filter((a) => a.projectId !== id)
-      const newUnread = new Set(Array.from(s.unreadWorkspaceIds).filter((wsId) => !removedWsIds.has(wsId)))
-      const newActiveAgent = new Set(Array.from(s.activeAgentWorkspaceIds).filter((wsId) => !removedWsIds.has(wsId)))
+      const newUnread = new Set(Array.from(s.unreadProjectIds).filter((pid) => pid !== id))
+      const newActiveAgent = new Set(Array.from(s.activeAgentProjectIds).filter((pid) => pid !== id))
       const newPrStatusMap = new Map(
         Array.from(s.prStatusMap.entries()).filter(([key]) => !key.startsWith(`${id}:`))
       )
       const newGhAvailability = new Map(s.ghAvailability)
       newGhAvailability.delete(id)
 
-      const tabMap = { ...s.lastActiveTabByWorkspace }
-      for (const wsId of removedWsIds) delete tabMap[wsId]
+      const tabMap = { ...s.lastActiveTabByProject }
+      delete tabMap[id]
 
-      const activeWorkspaceId =
-        s.activeWorkspaceId && removedWsIds.has(s.activeWorkspaceId)
-          ? (newWorkspaces[0]?.id ?? null)
-          : s.activeWorkspaceId
+      const activeProjectId =
+        s.activeProjectId === id
+          ? (newProjects[0]?.id ?? null)
+          : s.activeProjectId
       const activeTabId = newTabs.some((t) => t.id === s.activeTabId)
         ? s.activeTabId
-        : (newTabs.find((t) => t.workspaceId === activeWorkspaceId)?.id ?? newTabs[0]?.id ?? null)
+        : (newTabs.find((t) => t.projectId === activeProjectId)?.id ?? newTabs[0]?.id ?? null)
 
       return {
         projects: newProjects,
-        workspaces: newWorkspaces,
         tabs: newTabs,
         automations: newAutomations,
-        unreadWorkspaceIds: newUnread,
-        activeAgentWorkspaceIds: newActiveAgent,
+        unreadProjectIds: newUnread,
+        activeAgentProjectIds: newActiveAgent,
         prStatusMap: newPrStatusMap,
         ghAvailability: newGhAvailability,
-        activeWorkspaceId,
+        activeProjectId,
         activeTabId,
-        lastActiveTabByWorkspace: tabMap,
+        lastActiveTabByProject: tabMap,
       }
     }),
 
-  addWorkspace: (workspace) =>
-    set((s) => ({
-      workspaces: [...s.workspaces, workspace],
-      activeWorkspaceId: workspace.id,
-    })),
-
-  removeWorkspace: (id) =>
+  setActiveProject: (id) =>
     set((s) => {
-      const newWorkspaces = s.workspaces.filter((w) => w.id !== id)
-      const newTabs = s.tabs.filter((t) => t.workspaceId !== id)
-      const newUnread = new Set(s.unreadWorkspaceIds)
-      newUnread.delete(id)
-      const newActiveAgent = new Set(s.activeAgentWorkspaceIds)
-      newActiveAgent.delete(id)
-      const tabMap = { ...s.lastActiveTabByWorkspace }
-      delete tabMap[id]
-      return {
-        workspaces: newWorkspaces,
-        tabs: newTabs,
-        unreadWorkspaceIds: newUnread,
-        activeAgentWorkspaceIds: newActiveAgent,
-        lastActiveTabByWorkspace: tabMap,
-        activeWorkspaceId:
-          s.activeWorkspaceId === id
-            ? newWorkspaces[0]?.id ?? null
-            : s.activeWorkspaceId,
-        activeTabId:
-          newTabs.find((t) => t.id === s.activeTabId)
-            ? s.activeTabId
-            : newTabs[0]?.id ?? null,
-      }
-    }),
-
-  renameWorkspace: (id, name) =>
-    set((s) => ({
-      workspaces: s.workspaces.map((w) => w.id === id ? { ...w, name } : w),
-    })),
-
-  updateWorkspaceBranch: (id, branch) =>
-    set((s) => ({
-      workspaces: s.workspaces.map((w) => w.id === id ? { ...w, branch } : w),
-    })),
-
-  setActiveWorkspace: (id) =>
-    set((s) => {
-      // Remember which tab was active in the workspace we're leaving
-      const tabMap = { ...s.lastActiveTabByWorkspace }
-      if (s.activeWorkspaceId && s.activeTabId) {
-        tabMap[s.activeWorkspaceId] = s.activeTabId
+      const tabMap = { ...s.lastActiveTabByProject }
+      if (s.activeProjectId && s.activeTabId) {
+        tabMap[s.activeProjectId] = s.activeTabId
       }
 
-      const wsTabs = s.tabs.filter((t) => t.workspaceId === id)
-      const newUnread = new Set(s.unreadWorkspaceIds)
+      const projectTabs = s.tabs.filter((t) => t.projectId === id)
+      const newUnread = new Set(s.unreadProjectIds)
       if (id) newUnread.delete(id)
 
-      // Restore remembered tab, falling back to first tab
       const remembered = id ? tabMap[id] : null
-      const activeTabId = remembered && wsTabs.some((t) => t.id === remembered)
+      const activeTabId = remembered && projectTabs.some((t) => t.id === remembered)
         ? remembered
-        : wsTabs[0]?.id ?? null
+        : projectTabs[0]?.id ?? null
 
       return {
-        activeWorkspaceId: id,
+        activeProjectId: id,
         activeTabId,
-        lastActiveTabByWorkspace: tabMap,
-        unreadWorkspaceIds: newUnread,
+        lastActiveTabByProject: tabMap,
+        unreadProjectIds: newUnread,
       }
     }),
 
@@ -267,32 +123,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => {
       const newTabs = s.tabs.filter((t) => t.id !== id)
       const wasActive = s.activeTabId === id
-      const wsTabs = newTabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
+      const projectTabs = newTabs.filter((t) => t.projectId === s.activeProjectId)
       return {
         tabs: newTabs,
-        activeTabId: wasActive ? (wsTabs[wsTabs.length - 1]?.id ?? null) : s.activeTabId,
+        activeTabId: wasActive ? (projectTabs[projectTabs.length - 1]?.id ?? null) : s.activeTabId,
       }
     }),
 
   setActiveTab: (id) => set({ activeTabId: id }),
 
-  moveTabInActiveWorkspace: (sourceTabId, targetTabId) =>
+  moveTabInActiveProject: (sourceTabId, targetTabId) =>
     set((s) => {
-      const workspaceId = s.activeWorkspaceId
-      if (!workspaceId || sourceTabId === targetTabId) return s
+      const projectId = s.activeProjectId
+      if (!projectId || sourceTabId === targetTabId) return s
 
-      const wsTabs = s.tabs.filter((t) => t.workspaceId === workspaceId)
-      const sourceIndex = wsTabs.findIndex((t) => t.id === sourceTabId)
-      const targetIndex = wsTabs.findIndex((t) => t.id === targetTabId)
+      const projectTabs = s.tabs.filter((t) => t.projectId === projectId)
+      const sourceIndex = projectTabs.findIndex((t) => t.id === sourceTabId)
+      const targetIndex = projectTabs.findIndex((t) => t.id === targetTabId)
       if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return s
 
-      const reordered = [...wsTabs]
+      const reordered = [...projectTabs]
       const [moved] = reordered.splice(sourceIndex, 1)
       reordered.splice(targetIndex, 0, moved)
 
-      let wsCursor = 0
+      let cursor = 0
       return {
-        tabs: s.tabs.map((tab) => (tab.workspaceId === workspaceId ? reordered[wsCursor++] : tab)),
+        tabs: s.tabs.map((tab) => (tab.projectId === projectId ? reordered[cursor++] : tab)),
       }
     }),
 
@@ -312,9 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setRightPanelMode: (mode) =>
     set((s) => {
-      const projectId = s.activeWorkspaceId
-        ? s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.projectId
-        : null
+      const projectId = s.activeProjectId
       if (!projectId) return s
       return {
         rightPanelMode: { ...s.rightPanelMode, [projectId]: mode },
@@ -323,9 +177,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   toggleRightPanel: () =>
     set((s) => {
-      const projectId = s.activeWorkspaceId
-        ? s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.projectId
-        : null
+      const projectId = s.activeProjectId
       if (!projectId) return s
       const current = s.rightPanelOpen[projectId] ?? true
       return {
@@ -335,9 +187,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setRightPanelSize: (size: number) =>
     set((s) => {
-      const projectId = s.activeWorkspaceId
-        ? s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.projectId
-        : null
+      const projectId = s.activeProjectId
       if (!projectId) return s
       return {
         rightPanelSize: { ...s.rightPanelSize, [projectId]: size },
@@ -348,36 +198,36 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   nextTab: () => {
     const s = get()
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
-    if (wsTabs.length <= 1) return
-    const idx = wsTabs.findIndex((t) => t.id === s.activeTabId)
-    const next = wsTabs[(idx + 1) % wsTabs.length]
+    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+    if (projectTabs.length <= 1) return
+    const idx = projectTabs.findIndex((t) => t.id === s.activeTabId)
+    const next = projectTabs[(idx + 1) % projectTabs.length]
     set({ activeTabId: next.id })
   },
 
   prevTab: () => {
     const s = get()
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
-    if (wsTabs.length <= 1) return
-    const idx = wsTabs.findIndex((t) => t.id === s.activeTabId)
-    const prev = wsTabs[(idx - 1 + wsTabs.length) % wsTabs.length]
+    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+    if (projectTabs.length <= 1) return
+    const idx = projectTabs.findIndex((t) => t.id === s.activeTabId)
+    const prev = projectTabs[(idx - 1 + projectTabs.length) % projectTabs.length]
     set({ activeTabId: prev.id })
   },
 
-  createTerminalForActiveWorkspace: async () => {
+  createTerminalForActiveProject: async () => {
     const s = get()
-    if (!s.activeWorkspaceId) return
-    const ws = s.workspaces.find((w) => w.id === s.activeWorkspaceId)
-    if (!ws) return
+    if (!s.activeProjectId) return
+    const project = s.projects.find((p) => p.id === s.activeProjectId)
+    if (!project) return
 
     const shell = s.settings.defaultShell || undefined
-    const ptyId = await window.api.pty.create(ws.worktreePath, shell, { AGENT_ORCH_WS_ID: ws.id })
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
-    const termCount = wsTabs.filter((t) => t.type === 'terminal').length
+    const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: project.id })
+    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+    const termCount = projectTabs.filter((t) => t.type === 'terminal').length
 
     get().addTab({
       id: crypto.randomUUID(),
-      workspaceId: s.activeWorkspaceId,
+      projectId: s.activeProjectId,
       type: 'terminal',
       title: `Terminal ${termCount + 1}`,
       ptyId,
@@ -418,9 +268,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   openFileTab: (filePath) => {
     const s = get()
-    if (!s.activeWorkspaceId) return
+    if (!s.activeProjectId) return
     const existing = s.tabs.find(
-      (t) => t.workspaceId === s.activeWorkspaceId && t.type === 'file' && t.filePath === filePath
+      (t) => t.projectId === s.activeProjectId && t.type === 'file' && t.filePath === filePath
     )
     if (existing) {
       set({ activeTabId: existing.id })
@@ -428,102 +278,45 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     get().addTab({
       id: crypto.randomUUID(),
-      workspaceId: s.activeWorkspaceId,
+      projectId: s.activeProjectId,
       type: 'file',
       filePath,
     })
   },
 
-  nextWorkspace: () => {
-    const s = get()
-    if (s.workspaces.length <= 1) return
-    // Build visual order: workspaces grouped by project, root first within each
-    const ordered = s.projects.flatMap((p) =>
-      s.workspaces
-        .filter((w) => w.projectId === p.id)
-        .sort((a, b) => (Number(!!b.isRoot) - Number(!!a.isRoot))),
-    )
-    if (ordered.length <= 1) return
-    const idx = ordered.findIndex((w) => w.id === s.activeWorkspaceId)
-    const next = ordered[(idx + 1) % ordered.length]
-    get().setActiveWorkspace(next.id)
-  },
-
-  prevWorkspace: () => {
-    const s = get()
-    if (s.workspaces.length <= 1) return
-    const ordered = s.projects.flatMap((p) =>
-      s.workspaces
-        .filter((w) => w.projectId === p.id)
-        .sort((a, b) => (Number(!!b.isRoot) - Number(!!a.isRoot))),
-    )
-    if (ordered.length <= 1) return
-    const idx = ordered.findIndex((w) => w.id === s.activeWorkspaceId)
-    const prev = ordered[(idx - 1 + ordered.length) % ordered.length]
-    get().setActiveWorkspace(prev.id)
-  },
-
   switchToTabByIndex: (index) => {
     const s = get()
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
-    if (index >= 0 && index < wsTabs.length) {
-      set({ activeTabId: wsTabs[index].id })
+    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+    if (index >= 0 && index < projectTabs.length) {
+      set({ activeTabId: projectTabs[index].id })
     }
   },
 
-  closeAllWorkspaceTabs: () => {
+  closeAllProjectTabs: () => {
     const s = get()
-    if (!s.activeWorkspaceId) return
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
-    const hasUnsaved = wsTabs.some((t) => t.type === 'file' && t.unsaved)
+    if (!s.activeProjectId) return
+    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+    const hasUnsaved = projectTabs.some((t) => t.type === 'file' && t.unsaved)
     if (hasUnsaved && !window.confirm('Close all tabs? Some have unsaved changes.')) return
-    wsTabs.forEach((t) => {
+    projectTabs.forEach((t) => {
       if (t.type === 'terminal') window.api.pty.destroy(t.ptyId)
     })
-    const wsId = s.activeWorkspaceId
+    const projectId = s.activeProjectId
     set((state) => ({
-      tabs: state.tabs.filter((t) => t.workspaceId !== wsId),
+      tabs: state.tabs.filter((t) => t.projectId !== projectId),
       activeTabId: null,
     }))
   },
 
   focusOrCreateTerminal: async () => {
     const s = get()
-    if (!s.activeWorkspaceId) return
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
-    const termTab = wsTabs.find((t) => t.type === 'terminal')
+    if (!s.activeProjectId) return
+    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+    const termTab = projectTabs.find((t) => t.type === 'terminal')
     if (termTab) {
       set({ activeTabId: termTab.id })
     } else {
-      await get().createTerminalForActiveWorkspace()
-    }
-  },
-
-  openWorkspaceDialog: (projectId) => set({ workspaceDialogProjectId: projectId }),
-
-  deleteWorkspace: async (workspaceId) => {
-    const s = get()
-    const ws = s.workspaces.find((w) => w.id === workspaceId)
-    if (!ws) return
-    if (ws.isRoot) return // Root workspace can only be removed by deleting the project
-    const project = s.projects.find((p) => p.id === ws.projectId)
-
-    // Destroy PTYs for this workspace
-    s.tabs.filter((t) => t.workspaceId === workspaceId && t.type === 'terminal').forEach((t) => {
-      if (t.type === 'terminal') window.api.pty.destroy(t.ptyId)
-    })
-
-    // Remove from state immediately so sidebar updates
-    get().removeWorkspace(workspaceId)
-
-    // Remove git worktree in background (skip if workspace uses the main repo directly)
-    if (project && ws.worktreePath !== project.repoPath) {
-      try {
-        await window.api.git.removeWorktree(project.repoPath, ws.worktreePath)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to remove worktree'
-        get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
-      }
+      await get().createTerminalForActiveProject()
     }
   },
 
@@ -536,24 +329,47 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get()
     const project = s.projects.find((p) => p.id === projectId)
     if (!project) return
-    const projectWorkspaces = s.workspaces.filter((w) => w.projectId === projectId)
 
-    // Destroy PTYs and remove worktrees for all workspaces in this project
-    for (const ws of projectWorkspaces) {
-      s.tabs.filter((t) => t.workspaceId === ws.id && t.type === 'terminal').forEach((t) => {
-        if (t.type === 'terminal') window.api.pty.destroy(t.ptyId)
-      })
-      if (ws.worktreePath !== project.repoPath) {
-        try {
-          await window.api.git.removeWorktree(project.repoPath, ws.worktreePath)
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Failed to remove worktree'
-          get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
-        }
-      }
-    }
+    const projectTabs = s.tabs.filter((t) => t.projectId === projectId)
+    projectTabs.forEach((t) => {
+      if (t.type === 'terminal') window.api.pty.destroy(t.ptyId)
+    })
 
     get().removeProject(projectId)
+  },
+
+  checkoutBranch: async (projectId, branch) => {
+    const s = get()
+    const project = s.projects.find((p) => p.id === projectId)
+    if (!project) return
+
+    try {
+      await window.api.git.checkoutBranch(project.repoPath, branch)
+      set((s) => ({
+        projects: s.projects.map((p) => (p.id === projectId ? { ...p, branch } : p)),
+      }))
+      get().addToast({ id: crypto.randomUUID(), message: `Switched to branch: ${branch}`, type: 'info' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to checkout branch'
+      get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
+    }
+  },
+
+  createBranch: async (projectId, branch, baseBranch) => {
+    const s = get()
+    const project = s.projects.find((p) => p.id === projectId)
+    if (!project) return
+
+    try {
+      await window.api.git.createBranch(project.repoPath, branch, baseBranch)
+      set((s) => ({
+        projects: s.projects.map((p) => (p.id === projectId ? { ...p, branch } : p)),
+      }))
+      get().addToast({ id: crypto.randomUUID(), message: `Created branch: ${branch}`, type: 'info' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create branch'
+      get().addToast({ id: crypto.randomUUID(), message: msg, type: 'error' })
+    }
   },
 
   updateSettings: (partial) =>
@@ -563,7 +379,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleAutomations: () => set((s) => ({ automationsOpen: !s.automationsOpen, settingsOpen: false })),
 
   showConfirmDialog: (dialog) => set({ confirmDialog: dialog }),
-
   dismissConfirmDialog: () => set({ confirmDialog: null }),
 
   addToast: (toast) =>
@@ -575,24 +390,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleQuickOpen: () => set((s) => ({ quickOpenVisible: !s.quickOpenVisible })),
   closeQuickOpen: () => set({ quickOpenVisible: false }),
 
-  markWorkspaceUnread: (workspaceId) =>
+  markProjectUnread: (projectId) =>
     set((s) => {
-      if (s.unreadWorkspaceIds.has(workspaceId)) return s
-      const newUnread = new Set(s.unreadWorkspaceIds)
-      newUnread.add(workspaceId)
-      return { unreadWorkspaceIds: newUnread }
+      if (s.unreadProjectIds.has(projectId)) return s
+      const newUnread = new Set(s.unreadProjectIds)
+      newUnread.add(projectId)
+      return { unreadProjectIds: newUnread }
     }),
 
-  clearWorkspaceUnread: (workspaceId) =>
+  clearProjectUnread: (projectId) =>
     set((s) => {
-      if (!s.unreadWorkspaceIds.has(workspaceId)) return s
-      const newUnread = new Set(s.unreadWorkspaceIds)
-      newUnread.delete(workspaceId)
-      return { unreadWorkspaceIds: newUnread }
+      if (!s.unreadProjectIds.has(projectId)) return s
+      const newUnread = new Set(s.unreadProjectIds)
+      newUnread.delete(projectId)
+      return { unreadProjectIds: newUnread }
     }),
 
-  setActiveAgentWorkspaces: (workspaceIds) =>
-    set(() => ({ activeAgentWorkspaceIds: new Set(workspaceIds) })),
+  setActiveAgentProjects: (projectIds) =>
+    set(() => ({ activeAgentProjectIds: new Set(projectIds) })),
 
   setPrStatuses: (projectId, statuses) =>
     set((s) => {
@@ -621,10 +436,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   removeAutomation: (id) =>
     set((s) => ({ automations: s.automations.filter((a) => a.id !== id) })),
 
-  openDiffTab: (workspaceId) => {
+  openDiffTab: (projectId) => {
     const s = get()
     const existing = s.tabs.find(
-      (t) => t.workspaceId === workspaceId && t.type === 'diff'
+      (t) => t.projectId === projectId && t.type === 'diff'
     )
     if (existing) {
       set({ activeTabId: existing.id })
@@ -632,63 +447,67 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     get().addTab({
       id: crypto.randomUUID(),
-      workspaceId,
+      projectId,
       type: 'diff',
     })
   },
 
   hydrateState: (data) => {
+    console.log('[hydrateState] Starting with data keys:', Object.keys(data))
     const projects = (data.projects ?? []).map((project) => ({
       ...project,
       prLinkProvider: project.prLinkProvider ?? DEFAULT_PR_LINK_PROVIDER,
     }))
-    const workspaces = data.workspaces ?? []
-    const saved = data.activeWorkspaceId
+    console.log('[hydrateState] Projects after migration:', projects.length)
+    const saved = data.activeProjectId
+    console.log('[hydrateState] Saved activeProjectId:', saved)
     const settings = data.settings ? { ...DEFAULT_SETTINGS, ...data.settings } : { ...DEFAULT_SETTINGS }
-    const activeWorkspaceId = settings.restoreWorkspace
-      ? ((saved && workspaces.some((w) => w.id === saved) ? saved : workspaces[0]?.id) ?? null)
+    console.log('[hydrateState] Settings restoreProject:', settings.restoreProject, 'restoreWorkspace:', (data.settings as any)?.restoreWorkspace)
+    const shouldRestore = settings.restoreProject ?? (data.settings as any)?.restoreWorkspace ?? true
+    console.log('[hydrateState] shouldRestore:', shouldRestore)
+    const activeProjectId = shouldRestore
+      ? ((saved && projects.some((p) => p.id === saved) ? saved : projects[0]?.id) ?? null)
       : null
-    // Tabs will be reconciled with live PTYs asynchronously after set
+    console.log('[hydrateState] Final activeProjectId:', activeProjectId)
     const tabs = data.tabs ?? []
+    console.log('[hydrateState] Tabs count:', tabs.length)
     const activeTabId = data.activeTabId ?? null
     set({
       projects,
-      workspaces,
       tabs,
       automations: data.automations ?? [],
-      activeWorkspaceId,
+      activeProjectId,
       activeTabId,
-      lastActiveTabByWorkspace: data.lastActiveTabByWorkspace ?? {},
+      lastActiveTabByProject: data.lastActiveTabByProject ?? {},
       settings,
       rightPanelMode: data.rightPanelMode ?? {},
       rightPanelOpen: data.rightPanelOpen ?? {},
       rightPanelSize: data.rightPanelSize ?? {},
     })
+    console.log('[hydrateState] State set complete')
   },
 
-  activeWorkspaceTabs: () => {
+  activeProjectTabs: () => {
     const s = get()
-    return s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
+    return s.tabs.filter((t) => t.projectId === s.activeProjectId)
   },
 
   activeProject: () => {
     const s = get()
-    const ws = s.workspaces.find((w) => w.id === s.activeWorkspaceId)
-    return ws ? s.projects.find((p) => p.id === ws.projectId) : undefined
+    return s.projects.find((p) => p.id === s.activeProjectId)
   },
 }))
 
-// ── State persistence ──
+// State persistence
 
 function getPersistedSlice(state: AppState): PersistedState {
   return {
     projects: state.projects,
-    workspaces: state.workspaces,
     tabs: state.tabs,
     automations: state.automations,
-    activeWorkspaceId: state.activeWorkspaceId,
+    activeProjectId: state.activeProjectId,
     activeTabId: state.activeTabId,
-    lastActiveTabByWorkspace: state.lastActiveTabByWorkspace,
+    lastActiveTabByProject: state.lastActiveTabByProject,
     settings: state.settings,
     rightPanelMode: state.rightPanelMode,
     rightPanelOpen: state.rightPanelOpen,
@@ -705,15 +524,13 @@ function debouncedSave(state: AppState) {
   }, 500)
 }
 
-// Subscribe to store changes and debounce-save persisted slice
 useAppStore.subscribe((state, prevState) => {
   if (
     state.projects !== prevState.projects ||
-    state.workspaces !== prevState.workspaces ||
     state.tabs !== prevState.tabs ||
     state.activeTabId !== prevState.activeTabId ||
     state.automations !== prevState.automations ||
-    state.activeWorkspaceId !== prevState.activeWorkspaceId ||
+    state.activeProjectId !== prevState.activeProjectId ||
     state.settings !== prevState.settings ||
     state.rightPanelMode !== prevState.rightPanelMode ||
     state.rightPanelOpen !== prevState.rightPanelOpen ||
@@ -723,32 +540,35 @@ useAppStore.subscribe((state, prevState) => {
   }
 })
 
-// Flush state to disk synchronously when the window is closing.
-// Uses sendSync + writeFileSync so the write completes before the renderer is destroyed.
 window.addEventListener('beforeunload', () => {
   if (saveTimer) clearTimeout(saveTimer)
   window.api.state.saveSync(getPersistedSlice(useAppStore.getState()))
 })
 
-// Load persisted state on startup
 export async function hydrateFromDisk(): Promise<void> {
+  console.log('[Hydrate] Starting hydration from disk...')
   let livePtyIds: Set<string> | null = null
   try {
+    console.log('[Hydrate] Listing live PTYs...')
     livePtyIds = new Set(await window.api.pty.list())
+    console.log('[Hydrate] Live PTYs:', Array.from(livePtyIds))
   } catch (err) {
-    console.error('Failed to list live PTYs before hydrate:', err)
+    console.error('[Hydrate] Failed to list live PTYs:', err)
   }
 
   try {
+    console.log('[Hydrate] Loading state from disk...')
     const data = await window.api.state.load()
+    console.log('[Hydrate] State loaded:', data ? 'yes' : 'no', data ? 'with keys: ' + Object.keys(data).join(', ') : '')
     if (data) {
+      console.log('[Hydrate] Calling hydrateState...')
       useAppStore.getState().hydrateState(data)
+      console.log('[Hydrate] hydrateState complete')
     }
   } catch (err) {
-    console.error('Failed to load persisted state:', err)
+    console.error('[Hydrate] Failed to load persisted state:', err)
   }
 
-  // Reconcile persisted terminal tabs against live PTY processes
   try {
     if (!livePtyIds) {
       livePtyIds = new Set(await window.api.pty.list())
@@ -757,7 +577,6 @@ export async function hydrateFromDisk(): Promise<void> {
     const store = useAppStore.getState()
     const tabs = store.tabs
 
-    // Respawn PTYs for terminal tabs whose process is no longer alive
     const deadTabs = tabs.filter(
       (t): t is Extract<Tab, { type: 'terminal' }> =>
         t.type === 'terminal' && !resolvedPtyIds.has(t.ptyId)
@@ -766,10 +585,10 @@ export async function hydrateFromDisk(): Promise<void> {
       const shell = store.settings.defaultShell || undefined
       const updatedTabs = [...tabs]
       for (const dead of deadTabs) {
-        const ws = store.workspaces.find((w) => w.id === dead.workspaceId)
-        if (!ws) continue
+        const project = store.projects.find((p) => p.id === dead.projectId)
+        if (!project) continue
         try {
-          const newPtyId = await window.api.pty.create(ws.worktreePath, shell, { AGENT_ORCH_WS_ID: ws.id })
+          const newPtyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: project.id })
           const idx = updatedTabs.findIndex((t) => t.id === dead.id)
           if (idx !== -1) updatedTabs[idx] = { ...dead, ptyId: newPtyId }
           const startupCmd = store.settings.terminalStartupCommand
@@ -777,78 +596,20 @@ export async function hydrateFromDisk(): Promise<void> {
             executeTerminalStartupCommand(newPtyId, startupCmd)
           }
         } catch {
-          // If respawn fails, drop the tab
           const idx = updatedTabs.findIndex((t) => t.id === dead.id)
           if (idx !== -1) updatedTabs.splice(idx, 1)
         }
       }
-      // Drop any terminal tabs whose workspace no longer exists
       const finalTabs = updatedTabs.filter(
-        (t) => t.type !== 'terminal' || store.workspaces.some((w) => w.id === t.workspaceId)
+        (t) => t.type !== 'terminal' || store.projects.some((p) => p.id === t.projectId)
       )
       const activeTabId = finalTabs.find((t) => t.id === store.activeTabId)
         ? store.activeTabId
-        : (finalTabs.find((t) => t.workspaceId === store.activeWorkspaceId)?.id ?? null)
+        : (finalTabs.find((t) => t.projectId === store.activeProjectId)?.id ?? null)
       useAppStore.setState({ tabs: finalTabs, activeTabId })
     }
-
   } catch (err) {
     console.error('Failed to reconcile PTY tabs:', err)
-  }
-
-  // Ensure every project has a root workspace (migration for existing users)
-  try {
-    const storeAfterPty = useAppStore.getState()
-    for (const project of storeAfterPty.projects) {
-      // Use direct setState here to avoid mutating active selection during hydration.
-      const hasRoot = useAppStore.getState().workspaces.some((w) => w.projectId === project.id && w.isRoot)
-      if (!hasRoot) {
-        let branch = ''
-        try {
-          branch = await window.api.git.getCurrentBranch(project.repoPath)
-        } catch { /* fallback to empty */ }
-
-        const wsId = crypto.randomUUID()
-        useAppStore.setState((s) => ({
-          workspaces: [
-            ...s.workspaces,
-            {
-              id: wsId,
-              name: project.name,
-              branch,
-              worktreePath: project.repoPath,
-              projectId: project.id,
-              isRoot: true,
-            },
-          ],
-        }))
-
-        const shell = useAppStore.getState().settings.defaultShell || undefined
-        try {
-          const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_WS_ID: wsId })
-          useAppStore.setState((s) => ({
-            tabs: [
-              ...s.tabs,
-              {
-                id: crypto.randomUUID(),
-                workspaceId: wsId,
-                type: 'terminal',
-                title: 'Terminal',
-                ptyId,
-              },
-            ],
-          }))
-          const startupCmd = useAppStore.getState().settings.terminalStartupCommand
-          if (startupCmd) {
-            executeTerminalStartupCommand(ptyId, startupCmd)
-          }
-        } catch {
-          // If PTY creation fails, workspace still exists without a terminal
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to create root workspaces:', err)
   }
 
   // Schedule all enabled automations on startup
@@ -866,31 +627,17 @@ export async function hydrateFromDisk(): Promise<void> {
   // Listen for automation run-started events from main process
   window.api.automations.onRunStarted((data) => {
     const store = useAppStore.getState()
-    const { automationId, automationName, projectId, ptyId, worktreePath, branch } = data
+    const { automationId, automationName, projectId, ptyId, branch } = data
     const project = store.projects.find((p) => p.id === projectId)
     if (!project) return
 
-    // Create workspace for the run
-    const now = new Date()
-    const timestamp = now.toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric',
-    }) + ' ' + now.toLocaleTimeString('en-US', {
-      hour: 'numeric', minute: '2-digit',
-    })
-    const wsId = crypto.randomUUID()
-    store.addWorkspace({
-      id: wsId,
-      name: `${automationName} · ${timestamp}`,
-      branch: branch || '',
-      worktreePath: worktreePath || project.repoPath,
-      projectId,
-      automationId,
-    })
+    // Update project's branch
+    store.updateProject(projectId, { branch: branch || project.branch })
 
     // Create terminal tab for the run
     store.addTab({
       id: crypto.randomUUID(),
-      workspaceId: wsId,
+      projectId,
       type: 'terminal',
       title: automationName,
       ptyId,

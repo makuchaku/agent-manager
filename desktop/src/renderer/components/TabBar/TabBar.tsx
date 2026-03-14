@@ -15,15 +15,15 @@ export function TabBar() {
   const activeTabId = useAppStore((s) => s.activeTabId)
   const setActiveTab = useAppStore((s) => s.setActiveTab)
   const removeTab = useAppStore((s) => s.removeTab)
-  const moveTabInActiveWorkspace = useAppStore((s) => s.moveTabInActiveWorkspace)
+  const moveTabInActiveProject = useAppStore((s) => s.moveTabInActiveProject)
   const allTabs = useAppStore((s) => s.tabs)
-  const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
-  const createTerminalForActiveWorkspace = useAppStore((s) => s.createTerminalForActiveWorkspace)
+  const activeProjectId = useAppStore((s) => s.activeProjectId)
+  const createTerminalForActiveProject = useAppStore((s) => s.createTerminalForActiveProject)
   const lastSavedTabId = useAppStore((s) => s.lastSavedTabId)
   const settings = useAppStore((s) => s.settings)
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
-  const tabs = allTabs.filter((t) => t.workspaceId === activeWorkspaceId)
+  const tabs = allTabs.filter((t) => t.projectId === activeProjectId)
 
   const handleClose = useCallback(
     (e: React.MouseEvent, tabId: string) => {
@@ -80,11 +80,11 @@ export function TabBar() {
       e.preventDefault()
       const sourceTabId = e.dataTransfer.getData('text/plain') || draggingTabId
       if (targetTabId && sourceTabId !== targetTabId) {
-        moveTabInActiveWorkspace(sourceTabId, targetTabId)
+        moveTabInActiveProject(sourceTabId, targetTabId)
       }
       clearDragState()
     },
-    [clearDragState, draggingTabId, moveTabInActiveWorkspace]
+    [clearDragState, draggingTabId, moveTabInActiveProject]
   )
 
   return (
@@ -131,7 +131,7 @@ export function TabBar() {
       </div>
 
       <Tooltip label="New terminal" shortcut="⌘T">
-        <button className={styles.newTabButton} onClick={createTerminalForActiveWorkspace}>
+        <button className={styles.newTabButton} onClick={createTerminalForActiveProject}>
           +
         </button>
       </Tooltip>

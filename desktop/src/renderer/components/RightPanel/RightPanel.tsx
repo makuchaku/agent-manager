@@ -9,12 +9,10 @@ export function RightPanel() {
   const setRightPanelMode = useAppStore((s) => s.setRightPanelMode)
   const rightPanelOpenRecord = useAppStore((s) => s.rightPanelOpen)
   const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)
-  const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
-  const workspaces = useAppStore((s) => s.workspaces)
+  const activeProjectId = useAppStore((s) => s.activeProjectId)
   const projects = useAppStore((s) => s.projects)
 
-  const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
-  const project = workspace ? projects.find((p) => p.id === workspace.projectId) : null
+  const project = projects.find((p) => p.id === activeProjectId)
 
   // Derive project-specific panel state, falling back to defaults
   const rightPanelMode = project ? rightPanelModeRecord[project.id] ?? 'gemini' : 'gemini'
@@ -117,30 +115,30 @@ export function RightPanel() {
             })}
           </div>
 
-          {/* Files/Changes Views */}
-          {!workspace && rightPanelMode !== 'gemini' ? (
-            <div className={styles.emptyState}>
-              <span className={styles.emptyIcon}>📁</span>
-              <span className={styles.emptyText}>
-                Select a workspace to browse files
-              </span>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: rightPanelMode === 'files' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                {workspace && <FileTree worktreePath={workspace.worktreePath} isActive={rightPanelMode === 'files'} />}
-              </div>
-              <div style={{ display: rightPanelMode === 'changes' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                {workspace && (
-                  <ChangedFiles
-                    worktreePath={workspace.worktreePath}
-                    workspaceId={workspace.id}
-                    isActive={rightPanelMode === 'changes'}
-                  />
-                )}
-              </div>
-            </>
-          )}
+           {/* Files/Changes Views */}
+           {!project && rightPanelMode !== 'gemini' ? (
+             <div className={styles.emptyState}>
+               <span className={styles.emptyIcon}>📁</span>
+               <span className={styles.emptyText}>
+                 Select a project to browse files
+               </span>
+             </div>
+           ) : (
+             <>
+               <div style={{ display: rightPanelMode === 'files' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                 {project && <FileTree repoPath={project.repoPath} isActive={rightPanelMode === 'files'} />}
+               </div>
+               <div style={{ display: rightPanelMode === 'changes' ? 'flex' : 'none', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                 {project && (
+                   <ChangedFiles
+                     repoPath={project.repoPath}
+                     projectId={project.id}
+                     isActive={rightPanelMode === 'changes'}
+                   />
+                 )}
+               </div>
+             </>
+           )}
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ interface FileNode {
 }
 
 interface Props {
-  worktreePath: string
+  repoPath: string
   isActive?: boolean
 }
 
@@ -99,23 +99,23 @@ function Node({ node, style }: NodeRendererProps<FileNode>) {
   )
 }
 
-export function FileTree({ worktreePath, isActive }: Props) {
+export function FileTree({ repoPath, isActive }: Props) {
   const [tree, setTree] = useState<FileNode[] | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(400)
 
   const fetchTree = useCallback(() => {
-    window.api.fs.getTreeWithStatus(worktreePath).then((nodes: FileNode[]) => {
+    window.api.fs.getTreeWithStatus(repoPath).then((nodes: FileNode[]) => {
       // Wrap in root node
       const root: FileNode = {
-        name: basename(worktreePath),
-        path: worktreePath,
+        name: basename(repoPath),
+        path: repoPath,
         type: 'directory',
         children: nodes,
       }
       setTree([root])
     }).catch(() => {})
-  }, [worktreePath])
+  }, [repoPath])
 
   // Initial fetch
   useEffect(() => {
@@ -124,15 +124,15 @@ export function FileTree({ worktreePath, isActive }: Props) {
 
   // Auto-refresh on filesystem changes
   useEffect(() => {
-    window.api.fs.watchDir(worktreePath)
+    window.api.fs.watchDir(repoPath)
     const unsub = window.api.fs.onDirChanged((changedDir: string) => {
-      if (changedDir === worktreePath) fetchTree()
+      if (changedDir === repoPath) fetchTree()
     })
     return () => {
       unsub()
-      window.api.fs.unwatchDir(worktreePath)
+      window.api.fs.unwatchDir(repoPath)
     }
-  }, [worktreePath, fetchTree])
+  }, [repoPath, fetchTree])
 
   // Re-fetch when tab becomes visible (git ops only touch .git/ which the watcher ignores)
   useEffect(() => {
@@ -160,11 +160,11 @@ export function FileTree({ worktreePath, isActive }: Props) {
         </div>
       ) : (
         <Tree<FileNode>
-          key={worktreePath}
+          key={repoPath}
           data={tree}
           idAccessor="path"
           openByDefault={false}
-          initialOpenState={{ [worktreePath]: true }}
+          initialOpenState={{ [repoPath]: true }}
           disableDrag={true}
           disableDrop={true}
           disableEdit={true}

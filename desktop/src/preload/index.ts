@@ -1,46 +1,34 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc-channels'
 import type { AutomationConfig, AutomationRunStartedEvent } from '../shared/automation-types'
-import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
 import type { PrLookupResult, ListOpenPrsResult } from '../shared/github-types'
 
 const api = {
   git: {
-    listWorktrees: (repoPath: string) =>
-      ipcRenderer.invoke(IPC.GIT_LIST_WORKTREES, repoPath),
-    createWorktree: (repoPath: string, name: string, branch: string, newBranch: boolean, baseBranch?: string, force?: boolean, requestId?: string) =>
-      ipcRenderer.invoke(IPC.GIT_CREATE_WORKTREE, repoPath, name, branch, newBranch, baseBranch, force, requestId),
-    createWorktreeFromPr: (repoPath: string, name: string, prNumber: number, localBranch: string, force?: boolean, requestId?: string) =>
-      ipcRenderer.invoke(IPC.GIT_CREATE_WORKTREE_FROM_PR, repoPath, name, prNumber, localBranch, force, requestId) as Promise<{ worktreePath: string; branch: string }>,
-    onCreateWorktreeProgress: (callback: (progress: CreateWorktreeProgressEvent) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, progress: CreateWorktreeProgressEvent) => callback(progress)
-      ipcRenderer.on(IPC.GIT_CREATE_WORKTREE_PROGRESS, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.GIT_CREATE_WORKTREE_PROGRESS, listener)
-      }
-    },
-    removeWorktree: (repoPath: string, worktreePath: string) =>
-      ipcRenderer.invoke(IPC.GIT_REMOVE_WORKTREE, repoPath, worktreePath),
-    getStatus: (worktreePath: string) =>
-      ipcRenderer.invoke(IPC.GIT_GET_STATUS, worktreePath),
-    getDiff: (worktreePath: string, staged: boolean) =>
-      ipcRenderer.invoke(IPC.GIT_GET_DIFF, worktreePath, staged),
-    getFileDiff: (worktreePath: string, filePath: string) =>
-      ipcRenderer.invoke(IPC.GIT_GET_FILE_DIFF, worktreePath, filePath),
+    getStatus: (repoPath: string) =>
+      ipcRenderer.invoke(IPC.GIT_GET_STATUS, repoPath),
+    getDiff: (repoPath: string, staged: boolean) =>
+      ipcRenderer.invoke(IPC.GIT_GET_DIFF, repoPath, staged),
+    getFileDiff: (repoPath: string, filePath: string) =>
+      ipcRenderer.invoke(IPC.GIT_GET_FILE_DIFF, repoPath, filePath),
     getBranches: (repoPath: string) =>
       ipcRenderer.invoke(IPC.GIT_GET_BRANCHES, repoPath),
-    stage: (worktreePath: string, paths: string[]) =>
-      ipcRenderer.invoke(IPC.GIT_STAGE, worktreePath, paths),
-    unstage: (worktreePath: string, paths: string[]) =>
-      ipcRenderer.invoke(IPC.GIT_UNSTAGE, worktreePath, paths),
-    discard: (worktreePath: string, paths: string[], untracked: string[]) =>
-      ipcRenderer.invoke(IPC.GIT_DISCARD, worktreePath, paths, untracked),
-    commit: (worktreePath: string, message: string) =>
-      ipcRenderer.invoke(IPC.GIT_COMMIT, worktreePath, message),
-    getCurrentBranch: (worktreePath: string) =>
-      ipcRenderer.invoke(IPC.GIT_GET_CURRENT_BRANCH, worktreePath) as Promise<string>,
+    stage: (repoPath: string, paths: string[]) =>
+      ipcRenderer.invoke(IPC.GIT_STAGE, repoPath, paths),
+    unstage: (repoPath: string, paths: string[]) =>
+      ipcRenderer.invoke(IPC.GIT_UNSTAGE, repoPath, paths),
+    discard: (repoPath: string, paths: string[], untracked: string[]) =>
+      ipcRenderer.invoke(IPC.GIT_DISCARD, repoPath, paths, untracked),
+    commit: (repoPath: string, message: string) =>
+      ipcRenderer.invoke(IPC.GIT_COMMIT, repoPath, message),
+    getCurrentBranch: (repoPath: string) =>
+      ipcRenderer.invoke(IPC.GIT_GET_CURRENT_BRANCH, repoPath) as Promise<string>,
     getDefaultBranch: (repoPath: string) =>
       ipcRenderer.invoke(IPC.GIT_GET_DEFAULT_BRANCH, repoPath) as Promise<string>,
+    checkoutBranch: (repoPath: string, branch: string) =>
+      ipcRenderer.invoke(IPC.GIT_CHECKOUT_BRANCH, repoPath, branch),
+    createBranch: (repoPath: string, branch: string, baseBranch?: string) =>
+      ipcRenderer.invoke(IPC.GIT_CREATE_BRANCH, repoPath, branch, baseBranch),
   },
 
   pty: {
@@ -104,15 +92,15 @@ const api = {
   },
 
   agent: {
-    onNotifyWorkspace: (callback: (workspaceId: string) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, wsId: string) => callback(wsId)
-      ipcRenderer.on(IPC.AGENT_NOTIFY_WORKSPACE, listener)
+    onNotifyProject: (callback: (projectId: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, projectId: string) => callback(projectId)
+      ipcRenderer.on(IPC.AGENT_NOTIFY_PROJECT, listener)
       return () => {
-        ipcRenderer.removeListener(IPC.AGENT_NOTIFY_WORKSPACE, listener)
+        ipcRenderer.removeListener(IPC.AGENT_NOTIFY_PROJECT, listener)
       }
     },
-    onActivityUpdate: (callback: (workspaceIds: string[]) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, wsIds: string[]) => callback(wsIds)
+    onActivityUpdate: (callback: (projectIds: string[]) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, projectIds: string[]) => callback(projectIds)
       ipcRenderer.on(IPC.AGENT_ACTIVITY_UPDATE, listener)
       return () => {
         ipcRenderer.removeListener(IPC.AGENT_ACTIVITY_UPDATE, listener)

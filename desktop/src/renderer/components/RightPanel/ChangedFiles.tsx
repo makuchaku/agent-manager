@@ -10,8 +10,8 @@ interface FileStatus {
 }
 
 interface Props {
-  worktreePath: string
-  workspaceId: string
+  repoPath: string
+  projectId: string
   isActive?: boolean
 }
 
@@ -23,7 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
   untracked: 'U',
 }
 
-export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
+export function ChangedFiles({ repoPath, projectId, isActive }: Props) {
   const [files, setFiles] = useState<FileStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -31,13 +31,13 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
   const openDiffTab = useAppStore((s) => s.openDiffTab)
 
   const refresh = useCallback(() => {
-    window.api.git.getStatus(worktreePath).then(setFiles).catch(() => {})
-  }, [worktreePath])
+    window.api.git.getStatus(repoPath).then(setFiles).catch(() => {})
+  }, [repoPath])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    window.api.git.getStatus(worktreePath).then((statuses) => {
+    window.api.git.getStatus(repoPath).then((statuses) => {
       if (!cancelled) {
         setFiles(statuses)
         setLoading(false)
@@ -46,23 +46,23 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
-  }, [worktreePath])
+  }, [repoPath])
 
   // Watch filesystem for changes and auto-refresh
   useEffect(() => {
-    window.api.fs.watchDir(worktreePath)
+    window.api.fs.watchDir(repoPath)
 
     const cleanup = window.api.fs.onDirChanged((changedPath) => {
-      if (changedPath === worktreePath) {
+      if (changedPath === repoPath) {
         refresh()
       }
     })
 
     return () => {
       cleanup()
-      window.api.fs.unwatchDir(worktreePath)
+      window.api.fs.unwatchDir(repoPath)
     }
-  }, [worktreePath, refresh])
+  }, [repoPath, refresh])
 
   // Re-fetch when tab becomes visible (git ops only touch .git/ which the watcher ignores)
   useEffect(() => {
@@ -85,35 +85,35 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
   }, [refresh])
 
   const stageFiles = useCallback((paths: string[]) => {
-    runGitOp(() => window.api.git.stage(worktreePath, paths))
-  }, [worktreePath, runGitOp])
+    runGitOp(() => window.api.git.stage(repoPath, paths))
+  }, [repoPath, runGitOp])
 
   const unstageFiles = useCallback((paths: string[]) => {
-    runGitOp(() => window.api.git.unstage(worktreePath, paths))
-  }, [worktreePath, runGitOp])
+    runGitOp(() => window.api.git.unstage(repoPath, paths))
+  }, [repoPath, runGitOp])
 
   const discardFiles = useCallback((file: FileStatus) => {
     if (file.status === 'untracked') {
-      runGitOp(() => window.api.git.discard(worktreePath, [], [file.path]))
+      runGitOp(() => window.api.git.discard(repoPath, [], [file.path]))
     } else {
-      runGitOp(() => window.api.git.discard(worktreePath, [file.path], []))
+      runGitOp(() => window.api.git.discard(repoPath, [file.path], []))
     }
-  }, [worktreePath, runGitOp])
+  }, [repoPath, runGitOp])
 
   const handleCommit = useCallback(() => {
     if (!commitMsg.trim() || staged.length === 0) return
     runGitOp(async () => {
-      await window.api.git.commit(worktreePath, commitMsg.trim())
+      await window.api.git.commit(repoPath, commitMsg.trim())
       setCommitMsg('')
     })
-  }, [worktreePath, commitMsg, staged.length, runGitOp])
+  }, [repoPath, commitMsg, staged.length, runGitOp])
 
   const openDiff = useCallback((path: string) => {
-    openDiffTab(workspaceId)
+    openDiffTab(projectId)
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent('diff:scrollToFile', { detail: path }))
     })
-  }, [openDiffTab, workspaceId])
+  }, [openDiffTab, projectId])
 
   if (loading) {
     return (
@@ -208,7 +208,7 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
                   onClick={() => {
                     const tracked = unstaged.filter((f) => f.status !== 'untracked').map((f) => f.path)
                     const untracked = unstaged.filter((f) => f.status === 'untracked').map((f) => f.path)
-                    runGitOp(() => window.api.git.discard(worktreePath, tracked, untracked))
+                    runGitOp(() => window.api.git.discard(repoPath, tracked, untracked))
                   }}
                 >
                   ↩

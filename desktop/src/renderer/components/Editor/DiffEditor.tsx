@@ -17,7 +17,7 @@ interface DiffFileData {
 }
 
 interface Props {
-  worktreePath: string
+  repoPath: string
   active: boolean
 }
 
@@ -75,14 +75,14 @@ function contentIndicatesBinary(text: string): boolean {
 interface DiffFileSectionProps {
   data: DiffFileData
   inline: boolean
-  worktreePath: string
+  repoPath: string
   onOpenFile: (filePath: string) => void
 }
 
 const DiffFileSection = memo(function DiffFileSection({
   data,
   inline,
-  worktreePath,
+  repoPath,
   onOpenFile,
 }: DiffFileSectionProps) {
   const parts = data.filePath.split('/')
@@ -91,7 +91,7 @@ const DiffFileSection = memo(function DiffFileSection({
 
   const fullPath = data.filePath.startsWith('/')
     ? data.filePath
-    : `${worktreePath}/${data.filePath}`
+    : `${repoPath}/${data.filePath}`
 
   return (
     <div className={styles.diffFileSection} id={`diff-${data.filePath}`}>
@@ -163,7 +163,7 @@ function FileStrip({
 
 // ── Main DiffViewer ──
 
-export function DiffViewer({ worktreePath, active }: Props) {
+export function DiffViewer({ repoPath, active }: Props) {
   const [files, setFiles] = useState<DiffFileData[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFile, setActiveFile] = useState<string | null>(null)
@@ -180,10 +180,10 @@ export function DiffViewer({ worktreePath, active }: Props) {
   // Load all changed files
   const loadFiles = useCallback(async () => {
     try {
-      const statuses: FileStatus[] = await window.api.git.getStatus(worktreePath)
+      const statuses: FileStatus[] = await window.api.git.getStatus(repoPath)
       const results = await Promise.all(
         statuses.map(async (file) => {
-          let patch = await window.api.git.getFileDiff(worktreePath, file.path)
+          let patch = await window.api.git.getFileDiff(repoPath, file.path)
           let isBinary =
             patchIndicatesBinary(patch) ||
             (pathIndicatesBinary(file.path) && (file.status === 'added' || file.status === 'untracked' || file.status === 'renamed'))
@@ -192,7 +192,7 @@ export function DiffViewer({ worktreePath, active }: Props) {
           if (!patch && !isBinary && (file.status === 'added' || file.status === 'untracked')) {
             const fullPath = file.path.startsWith('/')
               ? file.path
-              : `${worktreePath}/${file.path}`
+              : `${repoPath}/${file.path}`
             const content = await window.api.fs.readFile(fullPath)
             if (contentIndicatesBinary(content)) {
               isBinary = true
@@ -221,7 +221,7 @@ export function DiffViewer({ worktreePath, active }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [worktreePath])
+  }, [repoPath])
 
   useEffect(() => {
     loadFiles()
@@ -229,15 +229,15 @@ export function DiffViewer({ worktreePath, active }: Props) {
 
   // Auto-refresh on filesystem changes
   useEffect(() => {
-    window.api.fs.watchDir(worktreePath)
+    window.api.fs.watchDir(repoPath)
     const unsub = window.api.fs.onDirChanged((changedDir: string) => {
-      if (changedDir === worktreePath) loadFiles()
+      if (changedDir === repoPath) loadFiles()
     })
     return () => {
       unsub()
-      window.api.fs.unwatchDir(worktreePath)
+      window.api.fs.unwatchDir(repoPath)
     }
-  }, [worktreePath, loadFiles])
+  }, [repoPath, loadFiles])
 
   // Listen for scroll-to-file events from ChangedFiles panel
   useEffect(() => {
@@ -333,7 +333,7 @@ export function DiffViewer({ worktreePath, active }: Props) {
             key={f.filePath}
             data={f}
             inline={inline}
-            worktreePath={worktreePath}
+            repoPath={repoPath}
             onOpenFile={openFileTab}
           />
         ))}
