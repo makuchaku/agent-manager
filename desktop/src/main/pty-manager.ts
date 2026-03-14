@@ -157,11 +157,17 @@ export class PtyManager {
     if (command && command.length > 0) {
       file = command[0]
       args = command.slice(1)
-    } else {
-      const isWindows = process.platform === 'win32'
-      file = (shell && shell.trim()) || (isWindows ? (process.env.COMSPEC || 'powershell.exe') : (process.env.SHELL || '/bin/zsh'))
-      args = []
-    }
+} else {
+  const isWindows = process.platform === 'win32'
+  if (isWindows) {
+    // Use WSL Ubuntu on Windows instead of PowerShell
+    file = (shell && shell.trim()) || 'wsl.exe'
+    args = (shell && shell.trim()) ? [] : ['-d', 'Ubuntu']
+  } else {
+    file = (shell && shell.trim()) || (process.env.SHELL || '/bin/zsh')
+    args = []
+  }
+}
 
     const agentSessionId = extraEnv?.AGENT_ORCH_SESSION_ID || id
 
