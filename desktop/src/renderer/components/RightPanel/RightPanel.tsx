@@ -15,9 +15,11 @@ export function RightPanel() {
 
   const project = projects.find((p) => p.id === activeProjectId)
 
-  // Derive project-specific panel state, falling back to defaults
-  const rightPanelMode = project ? rightPanelModeRecord[project.id] ?? 'gemini' : 'gemini'
-  const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : true
+  // Derive project-specific panel state, falling back to safe defaults
+  // If no project is active, default to 'files' mode (not 'gemini') and hide the panel
+  // This prevents showing the webview when project is undefined, which would cause a white screen
+  const rightPanelMode = project ? rightPanelModeRecord[project.id] ?? 'files' : 'files'
+  const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : false
 
   const handleToggle = (mode: 'gemini' | 'files' | 'changes') => {
     if (rightPanelMode === mode && rightPanelOpen) {

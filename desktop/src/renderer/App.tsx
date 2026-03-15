@@ -80,9 +80,11 @@ export function App() {
   const activeTab = projectTabs.find((t) => t.id === activeTabId)
   const project = projects.find((p) => p.id === activeProjectId)
 
-  console.log('[App] projectTabs count:', projectTabs.length, ', activeTab:', activeTab ? 'yes' : 'no', ', project:', project ? project.name : 'none')
+  console.log('[App] State: projects count:', projects.length, ', activeProjectId:', activeProjectId, ', activeTabId:', activeTabId)
 
-  const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : true
+  // Defensive: if project is undefined (e.g., activeProjectId doesn't match any project),
+  // default to hiding the right panel to prevent showing unintended content
+  const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : false
   const rightPanelSize = project ? rightPanelSizeRecord[project.id] ?? 320 : 320
 
   const allTerminals = allTabs.filter((t): t is Extract<typeof t, { type: 'terminal' }> => t.type === 'terminal')

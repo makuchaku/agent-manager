@@ -476,12 +476,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       ? ((saved && projects.some((p) => p.id === saved) ? saved : projects[0]?.id) ?? null)
       : null
     console.log('[hydrateState] Final activeProjectId:', activeProjectId)
-    const tabs = data.tabs ?? []
-    console.log('[hydrateState] Tabs count:', tabs.length)
-    const activeTabId = data.activeTabId ?? null
+    const allTabs = data.tabs ?? []
+    const projectIds = new Set(projects.map((p) => p.id))
+    const validTabs = allTabs.filter((t) => t.projectId && projectIds.has(t.projectId))
+    console.log('[hydrateState] Tabs count:', allTabs.length, 'valid:', validTabs.length)
+    const savedActiveTabId = data.activeTabId ?? null
+    const activeTabId = savedActiveTabId && validTabs.some((t) => t.id === savedActiveTabId)
+      ? savedActiveTabId
+      : (validTabs.find((t) => t.projectId === activeProjectId)?.id ?? null)
     set({
       projects,
-      tabs,
+      tabs: validTabs,
       automations: data.automations ?? [],
       activeProjectId,
       activeTabId,
@@ -608,12 +613,13 @@ export async function hydrateFromDisk(): Promise<void> {
         }
       }
       const finalTabs = updatedTabs.filter(
-        (t) => t.type !== 'terminal' || store.projects.some((p) => p.id === t.projectId)
+        (t) => store.projects.some((p) => p.id === t.projectId)
       )
-      const activeTabId = finalTabs.find((t) => t.id === store.activeTabId)
+      const currentActiveTab = finalTabs.find((t) => t.id === store.activeTabId)
+      const validActiveTabId = currentActiveTab && currentActiveTab.projectId
         ? store.activeTabId
         : (finalTabs.find((t) => t.projectId === store.activeProjectId)?.id ?? null)
-      useAppStore.setState({ tabs: finalTabs, activeTabId })
+      useAppStore.setState({ tabs: finalTabs, activeTabId: validActiveTabId })
     }
   } catch (err) {
     console.error('Failed to reconcile PTY tabs:', err)
