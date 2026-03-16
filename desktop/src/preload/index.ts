@@ -174,7 +174,24 @@ const api = {
       ipcRenderer.invoke(IPC.GITHUB_LIST_OPEN_PRS, repoPath) as Promise<ListOpenPrsResult>,
   },
 
+  /**
+   * Clipboard API - IMAGE OPERATIONS ONLY
+   * 
+   * Note: Text copy/paste operations use SYSTEM DEFAULTS and are NOT exposed here.
+   * The app intentionally does not provide custom text clipboard APIs because:
+   * 1. xterm.js handles copy/paste natively with standard terminal behavior
+   * 2. Electron's built-in clipboard API works automatically in the renderer
+   * 3. System defaults work correctly across platforms (macOS, Linux, WSL)
+   * 
+   * Only image clipboard operations are exposed here since they require special
+   * handling (saving to temp files) that the terminal component uses.
+   */
   clipboard: {
+    /**
+     * Saves an image from the clipboard to a temporary file.
+     * Used by the terminal when pasting images (Ctrl+Shift+V or similar).
+     * Returns the path to the saved image file, or null if no image in clipboard.
+     */
     saveImage: () =>
       ipcRenderer.invoke(IPC.CLIPBOARD_SAVE_IMAGE) as Promise<string | null>,
   },

@@ -1,3 +1,21 @@
+/**
+ * TerminalPanel Component
+ * 
+ * This component renders an xterm.js terminal for interacting with PTY processes.
+ * 
+ * KEYBOARD SHORTCUT BEHAVIOR:
+ * - Copy/Paste (Ctrl+C/V): Uses SYSTEM DEFAULTS via xterm.js native handling
+ *   The terminal checks if text is selected: if yes, copies to clipboard; 
+ *   if no, sends SIGINT to the running process. This is the standard behavior
+ *   users expect in terminal applications.
+ * - Ctrl+P: Passes through to the shell (e.g., reverse-i-search in bash) or
+ *   triggers browser print dialog. The app does not intercept this.
+ * - Image paste: Custom handler (see useShortcuts.ts) saves clipboard images
+ *   to temp files and inserts the path into the terminal.
+ * 
+ * The terminal does NOT implement custom key handlers for copy/paste/ctrl+p
+ * to ensure system defaults work correctly across all platforms (macOS, Linux, WSL).
+ */
 import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'

@@ -121,6 +121,14 @@ app.whenReady().then(() => {
       },
       {
         label: 'Edit',
+        // IMPORTANT: These role-based menu items use SYSTEM DEFAULTS for copy/paste.
+        // They do NOT force shortcut interception - instead, they rely on Electron's
+        // native behavior which respects focus context. When the terminal is focused,
+        // Ctrl/Cmd+C/V will be handled by xterm.js (terminal copy/paste). When other
+        // UI elements are focused, these will trigger standard copy/paste operations.
+        // This design ensures terminal users get expected behavior (Ctrl+C sends SIGINT
+        // when no selection, copies when text is selected) while maintaining standard
+        // editing capabilities elsewhere in the app.
         submenu: [
           { role: 'undo' },
           { role: 'redo' },

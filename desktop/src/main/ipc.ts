@@ -652,7 +652,20 @@ export function registerIpcHandlers(): void {
     automationScheduler.unschedule(automationId)
   })
 
-  // Clipboard handlers
+  /**
+   * Clipboard handlers - IMAGE OPERATIONS ONLY
+   * 
+   * Note: Text clipboard operations (copy/paste) use SYSTEM DEFAULTS and are NOT
+   * handled here. The renderer process relies on:
+   * 1. xterm.js native copy/paste handling for the terminal
+   * 2. Electron's built-in clipboard API accessible in renderer
+   * 3. Standard Edit menu roles (copy, paste) in main/index.ts
+   * 
+   * Only image clipboard operations are handled here since they require:
+   * - Reading image data from the system clipboard
+   * - Saving to a temporary file
+   * - Returning the file path to the renderer
+   */
   ipcMain.handle(IPC.CLIPBOARD_SAVE_IMAGE, async () => {
     const img = clipboard.readImage()
     if (img.isEmpty()) return null
