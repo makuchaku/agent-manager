@@ -67,7 +67,7 @@
   display: block;
   font-weight: var(--weight-semibold);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: calc(var(--text-sm) - 4px);  /* Reduced by 4px from var(--text-sm) */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -672,6 +672,7 @@
 }
 
 .workspaceName {
+  font-size: calc(var(--text-base) - 2px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

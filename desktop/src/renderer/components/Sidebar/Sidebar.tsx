@@ -244,10 +244,14 @@ export function Sidebar() {
                   ▶
                 </span>
                 <div className={styles.projectInfo}>
-                  <span className={styles.projectTitle}>{project.name}</span>
+                  {/* Folder name displayed as primary identifier (top) */}
+                  <span className={styles.projectTitle}>
+                    {getDirectoryName(project.repoPath)}
+                  </span>
+                  {/* Project name displayed as secondary info (bottom) with full path tooltip */}
                   <Tooltip label={project.repoPath}>
                     <span className={styles.projectSubtitle}>
-                      {getDirectoryName(project.repoPath)}
+                      {project.name}
                     </span>
                   </Tooltip>
                 </div>
@@ -292,7 +296,7 @@ export function Sidebar() {
 
                   <button
                     className={styles.actionButton}
-                    style={{ paddingLeft: "var(--space-4)" }}
+                    style={{ paddingLeft: "var(--space-4)", fontSize: "calc(var(--text-sm) - 2px)" }}
                     onClick={() => {
                       const newSet = new Set(expandedProjects);
                       if (isCurrentlyExpanded) {
@@ -313,7 +317,7 @@ export function Sidebar() {
                   </button>
 
                   {isCurrentlyExpanded && (
-                    <div style={{ paddingLeft: "var(--space-4)" }}>
+                    <div style={{ paddingLeft: "var(--space-4)", fontSize: "calc(var(--text-base) - 2px)" }}>
                       {branches.filter((b: BranchInfo) => !b.isRemote).map((branch: BranchInfo) => (
                         <div
                           key={branch.name}
@@ -337,7 +341,7 @@ export function Sidebar() {
                         <>
                           <div
                             style={{
-                              fontSize: "var(--text-xs)",
+                              fontSize: "calc(var(--text-xs) - 2px)",
                               color: "var(--text-tertiary)",
                               padding: "var(--space-2) 0",
                             }}
@@ -383,7 +387,7 @@ export function Sidebar() {
                       ) : (
                         <button
                           className={styles.actionButton}
-                          style={{ paddingLeft: "var(--space-4)", fontSize: "var(--text-sm)" }}
+                          style={{ paddingLeft: "var(--space-4)", fontSize: "calc(var(--text-sm) - 2px)" }}
                           onClick={() => setShowNewBranchInput(project.id)}
                         >
                           <span className={styles.actionIcon}>+</span>
