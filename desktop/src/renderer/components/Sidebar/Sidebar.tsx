@@ -11,6 +11,45 @@ interface BranchInfo {
   isRemote: boolean;
 }
 
+/**
+ * Extracts the directory name from a file path.
+ * Handles both Unix (/) and Windows (\) path separators.
+ * Examples:
+ *   - "/Users/dev/projects/my-app" → "my-app"
+ *   - "C:\\Users\\dev\\projects\\my-app" → "my-app"
+ *   - "/path/to/project/" → "project" (handles trailing slash)
+ *   - "/" → "/" (root directory edge case)
+ * 
+ * @param filePath - The full file path
+ * @returns The last directory name or the full path if extraction fails
+ */
+function getDirectoryName(filePath: string): string {
+  // Handle empty or invalid paths
+  if (!filePath || typeof filePath !== 'string') {
+    return filePath || '';
+  }
+  
+  // Remove trailing slashes for consistent processing
+  const normalizedPath = filePath.replace(/[/\\]+$/, '');
+  
+  // Handle root directory edge case
+  if (normalizedPath === '' || normalizedPath === '/' || normalizedPath === '\\') {
+    return filePath;
+  }
+  
+  // Split by both Unix and Windows separators
+  const parts = normalizedPath.split(/[/\\]/);
+  
+  // Filter out empty strings and get the last part
+  const nonEmptyParts = parts.filter(part => part.length > 0);
+  
+  if (nonEmptyParts.length === 0) {
+    return filePath;
+  }
+  
+  return nonEmptyParts[nonEmptyParts.length - 1];
+}
+
 export function Sidebar() {
   const projects = useAppStore((s) => s.projects);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
@@ -206,7 +245,11 @@ export function Sidebar() {
                 </span>
                 <div className={styles.projectInfo}>
                   <span className={styles.projectTitle}>{project.name}</span>
-                  <span className={styles.projectSubtitle}>{project.repoPath}</span>
+                  <Tooltip label={project.repoPath}>
+                    <span className={styles.projectSubtitle}>
+                      {getDirectoryName(project.repoPath)}
+                    </span>
+                  </Tooltip>
                 </div>
                 <Tooltip label="Project settings">
                   <button
