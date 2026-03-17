@@ -420,14 +420,28 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const shell = s.settings.defaultShell || undefined
     const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: project.id })
-    const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
-    const termCount = projectTabs.filter((t) => t.type === 'terminal').length
+
+    // Determine terminal title based on shell type
+    let title = 'Terminal'
+    if (shell) {
+      if (shell.includes('powershell') || shell.includes('pwsh')) {
+        title = 'PowerShell'
+      } else if (shell.includes('bash')) {
+        title = 'Bash'
+      } else if (shell.includes('zsh')) {
+        title = 'Zsh'
+      } else if (shell.includes('fish')) {
+        title = 'Fish'
+      } else if (shell.includes('wsl') || shell.includes('ubuntu')) {
+        title = 'Ubuntu'
+      }
+    }
 
     get().addTab({
       id: crypto.randomUUID(),
       projectId: s.activeProjectId,
       type: 'terminal',
-      title: `Terminal ${termCount + 1}`,
+      title: title,
       ptyId,
     })
     const startupCmd = s.settings.terminalStartupCommand
@@ -899,13 +913,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (project) {
       // Create the terminal asynchronously
       const shell = s.settings.defaultShell || undefined
+      
+      // Determine terminal title based on shell type
+      let title = 'Terminal'
+      if (shell) {
+        if (shell.includes('powershell') || shell.includes('pwsh')) {
+          title = 'PowerShell'
+        } else if (shell.includes('bash')) {
+          title = 'Bash'
+        } else if (shell.includes('zsh')) {
+          title = 'Zsh'
+        } else if (shell.includes('fish')) {
+          title = 'Fish'
+        } else if (shell.includes('wsl') || shell.includes('ubuntu')) {
+          title = 'Ubuntu'
+        }
+      }
+      
       window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: project.id })
         .then(ptyId => {
           const newTab: Tab = {
             id: crypto.randomUUID(),
             projectId: s.activeProjectId!,
             type: 'terminal',
-            title: 'Terminal',
+            title: title,
             ptyId
           }
           

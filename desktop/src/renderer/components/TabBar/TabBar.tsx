@@ -104,7 +104,7 @@ export function TabBar() {
         id: crypto.randomUUID(),
         projectId: activeProjectId!,
         type: 'terminal',
-        title: `${title} ${termCount + 1}`,
+        title: title,
         ptyId,
       }
       

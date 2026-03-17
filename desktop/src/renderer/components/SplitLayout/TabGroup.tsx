@@ -102,7 +102,7 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
         id: crypto.randomUUID(),
         projectId,
         type: 'terminal',
-        title: `${title} ${termCount + 1}`,
+        title: title,
         ptyId,
       }
       
