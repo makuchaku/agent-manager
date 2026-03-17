@@ -84,6 +84,27 @@
   cursor: not-allowed;
 }
 
+/* Shell-specific button styling */
+.shellButton {
+  width: 32px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.shellIcon {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* Divider between shell buttons and split button */
+.controlDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-subtle);
+  margin: 0 var(--space-1);
+}
+
 /* ── Individual Tab ── */
 
 .tab {

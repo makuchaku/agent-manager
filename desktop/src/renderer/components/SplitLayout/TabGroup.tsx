@@ -59,10 +59,10 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
   }, [setActiveTab, setActivePaneId, paneId])
 
   /**
-   * Handle creating a new tab in THIS specific pane
+   * Handle creating a new tab with specific shell
    */
-  const handleNewTab = useCallback(async () => {
-    console.log('[TabGroup] New tab button clicked for pane:', paneId)
+  const handleNewTabWithShell = useCallback(async (shellName: 'default' | 'powershell' | 'ubuntu') => {
+    console.log('[TabGroup] New tab button clicked for pane:', paneId, 'with shell:', shellName)
     
     // First, set this pane as the active pane so the tab goes to the right place
     setActivePaneId(paneId)
@@ -75,8 +75,24 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
       return
     }
     
-    // Create the terminal
-    const shell = state.settings.defaultShell || undefined
+    // Determine shell based on selection
+    let shell: string | undefined
+    let title: string
+    switch (shellName) {
+      case 'powershell':
+        shell = 'powershell.exe'
+        title = 'PowerShell'
+        break
+      case 'ubuntu':
+        // On Windows, passing undefined triggers WSL Ubuntu default
+        shell = undefined
+        title = 'Ubuntu'
+        break
+      default:
+        shell = state.settings.defaultShell || undefined
+        title = 'Terminal'
+    }
+    
     try {
       const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: projectId })
       const projectTabs = state.tabs.filter((t) => t.projectId === projectId)
@@ -86,7 +102,7 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
         id: crypto.randomUUID(),
         projectId,
         type: 'terminal',
-        title: `Terminal ${termCount + 1}`,
+        title: `${title} ${termCount + 1}`,
         ptyId,
       }
       
@@ -106,6 +122,13 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
       console.error('[TabGroup] Failed to create terminal:', err)
     }
   }, [paneId, projectId, setActivePaneId, addTab])
+
+  /**
+   * Handle creating a new tab in THIS specific pane
+   */
+  const handleNewTab = useCallback(async () => {
+    await handleNewTabWithShell('default')
+  }, [handleNewTabWithShell])
 
   /**
    * Handle closing a tab
@@ -193,20 +216,49 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
           </button>
         </div>
 
-        {/* Controls: Split buttons only */}
+        {/* Controls: Shell options and split button */}
         <div className={styles.controls}>
-          <button 
-            className={styles.controlButton}
-            onClick={(e) => { 
-              console.log('[TabGroup] Vertical split button clicked')
-              e.stopPropagation()
-              handleSplit('vertical')
-            }}
-            title="Split right"
-            disabled={!activeTab}
-          >
-            ◫
-          </button>
+          <Tooltip label="New PowerShell">
+            <button 
+              className={`${styles.controlButton} ${styles.shellButton}`}
+              onClick={(e) => { 
+                console.log('[TabGroup] PowerShell button clicked')
+                e.stopPropagation()
+                handleNewTabWithShell('powershell')
+              }}
+              title="New PowerShell"
+            >
+              <span className={styles.shellIcon}>PS</span>
+            </button>
+          </Tooltip>
+          <Tooltip label="New Ubuntu (WSL)">
+            <button 
+              className={`${styles.controlButton} ${styles.shellButton}`}
+              onClick={(e) => { 
+                console.log('[TabGroup] Ubuntu button clicked')
+                e.stopPropagation()
+                handleNewTabWithShell('ubuntu')
+              }}
+              title="New Ubuntu (WSL)"
+            >
+              <span className={styles.shellIcon}>⊕</span>
+            </button>
+          </Tooltip>
+          <div className={styles.controlDivider} />
+          <Tooltip label="Split right">
+            <button 
+              className={styles.controlButton}
+              onClick={(e) => { 
+                console.log('[TabGroup] Vertical split button clicked')
+                e.stopPropagation()
+                handleSplit('vertical')
+              }}
+              title="Split right"
+              disabled={!activeTab}
+            >
+              ◫
+            </button>
+          </Tooltip>
         </div>
       </div>
 
