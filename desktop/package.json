@@ -10,7 +10,9 @@
     "preview": "electron-vite preview",
     "test": "npx playwright test --project=electron",
     "rebuild": "npx electron-rebuild",
-    "dist": "electron-vite build && electron-builder --mac --arm64",
+    "dist": "electron-vite build && electron-builder",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
     "postinstall": "node scripts/patch-electron-dev.js || exit 0"
   },
   "keywords": [],
