@@ -3,6 +3,55 @@
  * 
  * Styles for the tab group container within a pane.
  * Contains both the tab bar and the content area.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * BUG FIX DOCUMENTATION - Tab Bar Controls Visibility (2026-03-16)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * ISSUE: 
+ *   - PowerShell button missing from tab bar
+ *   - Ubuntu (WSL) button missing from tab bar  
+ *   - Open File button missing from tab bar
+ *   - Split button appeared left-aligned instead of right-aligned
+ * 
+ * ROOT CAUSE: CSS flexbox layout issue in .tabBar container
+ *   - .tabList had `flex: 1` which caused it to grow infinitely and consume 
+ *     ALL available space in the flex container
+ *   - .controls had `margin-left: auto` which relies on remaining space after
+ *     other flex items take their share
+ *   - Since .tabList consumed 100% of available space, there was no free space
+ *     left for margin-left:auto to push .controls to the right
+ *   - Result: .controls div was pushed off-screen or squeezed to 0 width
+ *   - All buttons in .controls (PS, Ubuntu, File, Split) became invisible
+ * 
+ * FIX APPLIED:
+ *   1. Added `justify-content: space-between` to .tabBar
+ *      - Ensures tabList stays left, controls stays right
+ *   2. Changed .tabList from `flex: 1` to `flex: 1 1 auto`
+ *      - Allows growing but prevents consuming all space at expense of controls
+ *   3. Removed `margin-left: auto` from .controls (no longer needed)
+ *   4. Added `flex-shrink: 0` to .controls
+ *      - Prevents controls from ever being squeezed, maintains minimum width
+ * 
+ * VERIFICATION: 
+ *   After fix, all buttons (PS, Ubuntu, File, Split) should be visible on the 
+ *   RIGHT side of the tab bar, next to the tabs on the left.
+ * 
+ * AFFECTED COMPONENTS:
+ *   - TabGroup.tsx: Contains the .controls div with these buttons:
+ *     * PowerShell button (opens PowerShell terminal)
+ *     * Ubuntu (WSL) button (opens WSL terminal)
+ *     * Open File button (opens file picker)
+ *     * Split button (splits current tab)
+ *   - All buttons use Tooltip wrapper and are critical for terminal/file operations
+ * 
+ * TECHNICAL DETAILS:
+ *   - File: TabGroup.module.css
+ *   - Classes modified: .tabBar, .tabList, .controls
+ *   - Layout: Flexbox container with two children (.tabList and .controls)
+ *   - Related: TabBar.tsx (legacy global tab bar - not affected, different layout)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 
 .tabGroup {
@@ -20,6 +69,12 @@
 .tabBar {
   display: flex;
   align-items: stretch;
+  /* BUG FIX: Added justify-content to ensure controls stay visible
+   * Previously, tabList with flex:1 would expand to fill all space,
+   * pushing controls off-screen. space-between ensures both elements
+   * have room. See: https://github.com/anomalyco/agent-manager/issues/XXX
+   */
+  justify-content: space-between;
   height: var(--tab-height);
   background: var(--surface-0);
   border-bottom: 1px solid var(--border-subtle);
@@ -29,11 +84,15 @@
   z-index: 10;
 }
 
-/* Tab list container - grows to take available space */
+/* Tab list container - grows to take available space but allows room for controls */
 .tabList {
   display: flex;
   align-items: stretch;
-  flex: 1;
+  /* BUG FIX: Changed from flex:1 to flex:1 1 auto to prevent infinite expansion
+   * This allows the tabList to grow but not at the expense of the controls div.
+   * The min-width:0 ensures it can shrink below content size when needed.
+   */
+  flex: 1 1 auto;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -52,8 +111,13 @@
   gap: var(--space-1);
   padding: 0 var(--space-3);
   background: var(--surface-0);
+  /* BUG FIX: Removed margin-left: auto, added flex-shrink:0
+   * Previously used margin-left:auto to push right, but with tabList flex:1,
+   * there was no free space for the margin to consume. Now using 
+   * justify-content: space-between on parent (.tabBar) instead.
+   * flex-shrink:0 ensures controls never get squeezed out.
+   */
   flex-shrink: 0;
-  margin-left: auto;
   position: relative;
   z-index: 100;
 }

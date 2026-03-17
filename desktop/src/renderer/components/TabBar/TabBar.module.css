@@ -182,14 +182,90 @@
   color: var(--text-primary);
 }
 
+/* ── Shell Buttons ── */
+
+.shellButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  padding: 0 var(--space-3);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.shellButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.shellButton:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-default);
+}
+
+.shellIcon {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* ── File Button ── */
+
+.fileButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.fileButton:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-default);
+}
+
+.fileIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
 /* ── Split Buttons ── */
 
 .splitButtons {
   display: flex;
   align-items: center;
-  margin-left: auto;
+  /* BUG FIX: Removed margin-left: auto, added flex-shrink:0 and explicit margin
+   * Previously margin-left:auto failed because dragSpacer (now removed) had flex:1
+   * which consumed all remaining space. Now using explicit margin to position.
+   * The tabBar itself has -webkit-app-region:drag, making dragSpacer redundant.
+   */
+  margin-left: var(--space-4);
   padding: 0 var(--space-3);
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
 }
 
 .splitButton {
@@ -218,11 +294,4 @@
 .splitButton:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-/* ── Spacer (drag region) ── */
-
-.dragSpacer {
-  flex: 1;
-  -webkit-app-region: drag;
 }
