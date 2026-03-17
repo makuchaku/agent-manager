@@ -1,0 +1,52 @@
+/**
+ * SplitPanel — CSS Module
+ * 
+ * Styles for the recursive split panel component.
+ * Uses allotment library classes for resize handles.
+ */
+
+.splitContainer {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pane {
+  overflow: hidden;
+  min-width: 100px;
+  min-height: 100px;
+}
+
+/* Custom allotment resize handle styling */
+.splitContainer :global(.sash) {
+  background-color: var(--border-subtle);
+  transition: background-color 0.15s ease;
+}
+
+.splitContainer :global(.sash:hover) {
+  background-color: var(--accent-blue);
+}
+
+.splitContainer :global(.sash.active) {
+  background-color: var(--accent-blue);
+}
+
+/* Vertical sash (for horizontal splits) */
+.splitContainer :global(.sash.vertical) {
+  width: 1px;
+}
+
+.splitContainer :global(.sash.vertical:hover),
+.splitContainer :global(.sash.vertical.active) {
+  width: 2px;
+}
+
+/* Horizontal sash (for vertical splits) */
+.splitContainer :global(.sash.horizontal) {
+  height: 1px;
+}
+
+.splitContainer :global(.sash.horizontal:hover),
+.splitContainer :global(.sash.horizontal.active) {
+  height: 2px;
+}

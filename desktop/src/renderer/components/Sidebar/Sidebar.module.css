@@ -67,7 +67,7 @@
   display: block;
   font-weight: var(--weight-semibold);
   color: var(--text-secondary);
-  font-size: calc(var(--text-sm) - 4px);  /* Reduced by 4px from var(--text-sm) */
+  font-size: var(--text-sm);  /* Increased by 2px (removed calc, now full size) */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -80,7 +80,7 @@
 
 .projectSubtitle {
   display: block;
-  font-size: var(--text-xs);
+  font-size: calc(var(--text-xs) - 2px);  /* Decreased by 2px from var(--text-xs) */
   color: var(--text-tertiary);
   margin-top: var(--space-0-5);
   overflow: hidden;

@@ -50,6 +50,31 @@ function getDirectoryName(filePath: string): string {
   return nonEmptyParts[nonEmptyParts.length - 1];
 }
 
+/**
+ * Capitalizes each word in a string.
+ * Splits on hyphens, underscores, and spaces.
+ * Examples:
+ *   - "my-project" → "My Project"
+ *   - "agent_manager" → "Agent Manager"
+ *   - "someProject" → "Someproject" (camelCase not handled)
+ *   - "my-app" → "My App"
+ * 
+ * @param str - The string to capitalize
+ * @returns The capitalized string with each word title-cased
+ */
+function capitalizeWords(str: string): string {
+  if (!str || typeof str !== 'string') {
+    return str || '';
+  }
+  
+  // Split on common word separators: hyphens, underscores, spaces
+  // Then capitalize each word and join with spaces
+  return str
+    .split(/[-_\s]+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export function Sidebar() {
   const projects = useAppStore((s) => s.projects);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
@@ -244,9 +269,9 @@ export function Sidebar() {
                   ▶
                 </span>
                 <div className={styles.projectInfo}>
-                  {/* Folder name displayed as primary identifier (top) */}
+                  {/* Folder name displayed as primary identifier (top) with each word capitalized */}
                   <span className={styles.projectTitle}>
-                    {getDirectoryName(project.repoPath)}
+                    {capitalizeWords(getDirectoryName(project.repoPath))}
                   </span>
                   {/* Project name displayed as secondary info (bottom) with full path tooltip */}
                   <Tooltip label={project.repoPath}>
@@ -296,7 +321,7 @@ export function Sidebar() {
 
                   <button
                     className={styles.actionButton}
-                    style={{ paddingLeft: "var(--space-4)", fontSize: "calc(var(--text-sm) - 2px)" }}
+                    style={{ paddingLeft: "var(--space-4)", fontSize: "calc(var(--text-sm) - 4px)" }}
                     onClick={() => {
                       const newSet = new Set(expandedProjects);
                       if (isCurrentlyExpanded) {

@@ -1,0 +1,117 @@
+/**
+ * TabSplitDropZone — CSS Module
+ * 
+ * Styles for the drag-and-drop split zones overlay.
+ * Zones are invisible until hovered during a drag operation.
+ */
+
+.dropZoneOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* Let clicks pass through normally */
+  display: flex;
+  flex-direction: column;
+  z-index: 100; /* Above tab bar, below modals */
+}
+
+/* Each zone is a drop target */
+.zone {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  opacity: 0; /* Invisible by default */
+}
+
+/* Show zones when dragging */
+.dropZoneOverlay:hover .zone,
+.zone.hovered {
+  opacity: 1;
+}
+
+/* Zone becomes visible on hover with accent color */
+.zone.hovered {
+  background: var(--accent-blue-glow);
+  box-shadow: inset 0 0 0 1px var(--accent-blue);
+}
+
+/* Zone indicator text */
+.zoneIndicator {
+  font-size: var(--text-xs);
+  color: var(--accent-blue);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-3);
+  border-radius: var(--radius-md);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.zone.hovered .zoneIndicator {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Zone Layout
+   ═══════════════════════════════════════════════════════ */
+
+/* Top zone — small height for top edge detection */
+.topZone {
+  height: 60px;
+  border-bottom: 1px solid transparent;
+}
+
+.topZone.hovered {
+  border-bottom-color: var(--accent-blue);
+}
+
+/* Middle row — left, center, right */
+.middleRow {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+
+/* Left zone */
+.leftZone {
+  width: 80px;
+  border-right: 1px solid transparent;
+}
+
+.leftZone.hovered {
+  border-right-color: var(--accent-blue);
+}
+
+/* Center zone — takes remaining space */
+.centerZone {
+  flex: 1;
+  background: transparent;
+}
+
+.centerZone.hovered {
+  background: rgba(122, 162, 247, 0.04);
+  box-shadow: inset 0 0 0 1px var(--accent-blue-dim);
+}
+
+/* Right zone */
+.rightZone {
+  width: 80px;
+  border-left: 1px solid transparent;
+}
+
+.rightZone.hovered {
+  border-left-color: var(--accent-blue);
+}
+
+/* Bottom zone — small height for bottom edge detection */
+.bottomZone {
+  height: 60px;
+  border-top: 1px solid transparent;
+}
+
+.bottomZone.hovered {
+  border-top-color: var(--accent-blue);
+}

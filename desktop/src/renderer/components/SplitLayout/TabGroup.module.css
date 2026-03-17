@@ -1,0 +1,33 @@
+/**
+ * TabGroup — CSS Module
+ * 
+ * Styles for the tab group container within a pane.
+ */
+
+.tabGroup {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+/* Active pane highlight — subtle border to show focus */
+.tabGroup.activePane {
+  box-shadow: inset 0 0 0 1px var(--accent-blue-dim);
+}
+
+/* Tab bar container at top */
+.tabBar {
+  flex-shrink: 0;
+}
+
+/* Content area below tabs */
+.contentArea {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0; /* Important for flex layout */
+}
