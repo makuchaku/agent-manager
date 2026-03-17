@@ -1,6 +1,6 @@
 {
-  "name": "makulabs-manager",
-  "productName": "MakuLabs Manager",
+  "name": "mickey",
+  "productName": "Mickey",
   "version": "1.0.0",
   "description": "Mac app for running multiple AI agents in parallel",
   "main": "./out/main/index.js",

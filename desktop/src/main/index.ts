@@ -12,6 +12,7 @@ function createWindow(): void {
     // Fixed dimensions removed to allow full-screen maximize on startup.
     minWidth: 1024,   // Fallback minimum for smaller monitors (increased from 900)
     minHeight: 768,   // Fallback minimum for smaller monitors (increased from 600)
+    title: 'Mickey',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
     backgroundColor: '#13141b',
@@ -60,13 +61,13 @@ function createWindow(): void {
   }
 }
 
-app.setName('MakuLabs Manager')
+app.setName('Mickey')
 
 // Isolate test data so e2e tests never touch real app state
 if (process.env.CI_TEST) {
   const { mkdtempSync } = require('fs')
   const { join } = require('path')
-  const testData = mkdtempSync(join(require('os').tmpdir(), 'makulabs-manager-test-'))
+  const testData = mkdtempSync(join(require('os').tmpdir(), 'mickey-test-'))
   app.setPath('userData', testData)
 }
 

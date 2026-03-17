@@ -1,4 +1,4 @@
-# Publishing MakuLabs Manager
+# Publishing Mickey
 
 ## Local Build (signed + notarized DMG)
 
@@ -24,7 +24,7 @@ export APPLE_TEAM_ID="XXXXXXXXXX"
 bun run dist
 ```
 
-Output: `dist/makulabs-manager-1.0.0.dmg` (signed + notarized)
+Output: `dist/mickey-1.0.0.dmg` (signed + notarized)
 
 ## GitHub Actions Release
 

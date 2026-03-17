@@ -675,7 +675,7 @@ export class GithubService {
           Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github+json',
           'Content-Type': 'application/json',
-          'User-Agent': 'makulabs-manager-desktop',
+          'User-Agent': 'mickey-desktop',
         },
         body: JSON.stringify({ query, variables }),
         signal: controller.signal,
