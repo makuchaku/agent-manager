@@ -418,6 +418,15 @@ export function registerIpcHandlers(): void {
     return result.filePaths[0]
   })
 
+  ipcMain.handle(IPC.APP_SELECT_FILE, async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      title: 'Open File',
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
   ipcMain.handle(IPC.APP_ADD_PROJECT_PATH, async (_e, dirPath: string) => {
     const { stat } = await import('fs/promises')
     try {

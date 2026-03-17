@@ -124,6 +124,55 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
   }, [paneId, projectId, setActivePaneId, addTab])
 
   /**
+   * Handle opening a file from disk
+   */
+  const handleOpenFile = useCallback(async () => {
+    console.log('[TabGroup] Open file button clicked for pane:', paneId)
+    
+    // First, set this pane as the active pane
+    setActivePaneId(paneId)
+    
+    // Get current state
+    const state = useAppStore.getState()
+    const project = state.projects.find(p => p.id === projectId)
+    if (!project) {
+      console.log('[TabGroup] No project found')
+      return
+    }
+    
+    // Open file picker
+    const filePath = await window.api.app.selectFile()
+    if (!filePath) {
+      console.log('[TabGroup] No file selected')
+      return
+    }
+    
+    // Check if file is already open
+    const existingTab = state.tabs.find(
+      (t) => t.projectId === projectId && t.type === 'file' && t.filePath === filePath
+    )
+    
+    if (existingTab) {
+      // Switch to existing tab
+      setActiveTab(existingTab.id)
+      console.log('[TabGroup] Switched to existing file tab:', filePath)
+      return
+    }
+    
+    // Create new file tab
+    const newTab: Tab = {
+      id: crypto.randomUUID(),
+      projectId,
+      type: 'file',
+      filePath,
+      unsaved: false,
+    }
+    
+    addTab(newTab)
+    console.log('[TabGroup] Opened file:', filePath)
+  }, [paneId, projectId, setActivePaneId, addTab, setActiveTab])
+
+  /**
    * Handle creating a new tab in THIS specific pane
    */
   const handleNewTab = useCallback(async () => {
@@ -242,6 +291,19 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
               title="New Ubuntu (WSL)"
             >
               <span className={styles.shellIcon}>⊕</span>
+            </button>
+          </Tooltip>
+          <Tooltip label="Open file">
+            <button 
+              className={`${styles.controlButton} ${styles.fileButton}`}
+              onClick={(e) => { 
+                console.log('[TabGroup] Open file button clicked')
+                e.stopPropagation()
+                handleOpenFile()
+              }}
+              title="Open file"
+            >
+              <span className={styles.fileIcon}>📄</span>
             </button>
           </Tooltip>
           <div className={styles.controlDivider} />

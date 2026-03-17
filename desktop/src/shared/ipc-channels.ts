@@ -36,6 +36,7 @@ export const IPC = {
 
   // App operations
   APP_SELECT_DIRECTORY: 'app:select-directory',
+  APP_SELECT_FILE: 'app:select-file',
   APP_ADD_PROJECT_PATH: 'app:add-project-path',
 
   // GitHub operations

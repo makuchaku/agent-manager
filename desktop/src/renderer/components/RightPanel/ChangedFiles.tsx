@@ -109,8 +109,10 @@ export function ChangedFiles({ repoPath, projectId, isActive }: Props) {
   }, [repoPath, commitMsg, staged.length, runGitOp])
 
   const openDiff = useCallback((path: string) => {
+    console.log('[ChangedFiles] Opening diff for:', path, 'projectId:', projectId)
     openDiffTab(projectId)
     requestAnimationFrame(() => {
+      console.log('[ChangedFiles] Dispatching scroll event for:', path)
       window.dispatchEvent(new CustomEvent('diff:scrollToFile', { detail: path }))
     })
   }, [openDiffTab, projectId])
@@ -271,7 +273,11 @@ function FileRow({
       </span>
       <span
         className={styles.changePath}
-        onClick={() => onOpenDiff(file.path)}
+        onDoubleClick={() => {
+          console.log('[ChangedFiles] Double-clicked on file:', file.path)
+          onOpenDiff(file.path)
+        }}
+        title="Double-click to open diff"
       >
         {dir && <span className={styles.changeDir}>{dir}</span>}
         {fileName}

@@ -69,7 +69,7 @@ export function TabContent({ tab, projectId }: TabContentProps) {
     case 'diff':
       return (
         <div className={styles.content}>
-          <DiffViewer repoPath={''} active={true} />
+          <DiffViewer repoPath={tab.repoPath} active={true} />
         </div>
       )
 

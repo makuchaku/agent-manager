@@ -88,6 +88,8 @@ const api = {
   app: {
     selectDirectory: () =>
       ipcRenderer.invoke(IPC.APP_SELECT_DIRECTORY),
+    selectFile: () =>
+      ipcRenderer.invoke(IPC.APP_SELECT_FILE),
     addProjectPath: (dirPath: string) =>
       ipcRenderer.invoke(IPC.APP_ADD_PROJECT_PATH, dirPath),
   },

@@ -5,7 +5,8 @@ import { titleFromTerminalCommand } from './terminal-tab-title'
 import { 
   createTabGroup, 
   findTabGroupContainingTab,
-  setActiveTabInTree
+  setActiveTabInTree,
+  collectAllTabGroups
 } from './layout-ops'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
@@ -197,18 +198,25 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addTab: (tab) =>
     set((s) => {
+      console.log('[addTab] Adding tab:', tab.type, tab.id, 'to project:', s.activeProjectId)
+      console.log('[addTab] Current projectLayouts:', s.projectLayouts[s.activeProjectId || ''] ? 'exists' : 'none')
+      console.log('[addTab] activePaneId:', s.activePaneId)
+      
       const newState: Partial<AppState> = {
         tabs: [...s.tabs, tab],
         activeTabId: tab.id,
       }
       
-      // If we have a layout for this project, add the tab to the active pane
+      // If we have a layout for this project, add the tab to the layout tree
       if (s.activeProjectId && s.projectLayouts[s.activeProjectId]) {
         const layout = s.projectLayouts[s.activeProjectId]
         const targetPaneId = s.activePaneId || layout.activePaneId
         
+        console.log('[addTab] targetPaneId:', targetPaneId)
+        
         if (targetPaneId) {
           // Add tab to the specific pane in the layout tree
+          console.log('[addTab] Adding to existing pane:', targetPaneId)
           newState.projectLayouts = {
             ...s.projectLayouts,
             [s.activeProjectId]: {
@@ -216,9 +224,31 @@ export const useAppStore = create<AppState>((set, get) => ({
               rootPane: addTabToPane(layout.rootPane, targetPaneId, tab)
             }
           }
+        } else {
+          // BUG FIX: If no active pane, add to the first available TabGroup
+          // This ensures the tab appears in the UI even when no pane is explicitly focused
+          console.log('[addTab] No targetPaneId, finding first TabGroup...')
+          const allTabGroups = collectAllTabGroups(layout.rootPane)
+          console.log('[addTab] Found TabGroups:', allTabGroups.length)
+          if (allTabGroups.length > 0) {
+            const firstTabGroup = allTabGroups[0]
+            console.log('[addTab] Adding to first TabGroup:', firstTabGroup.id)
+            newState.projectLayouts = {
+              ...s.projectLayouts,
+              [s.activeProjectId]: {
+                ...layout,
+                rootPane: addTabToPane(layout.rootPane, firstTabGroup.id, tab)
+              }
+            }
+            // Also update activePaneId to this group
+            newState.activePaneId = firstTabGroup.id
+          }
         }
+      } else {
+        console.log('[addTab] No project layout found, creating flat tab only')
       }
       
+      console.log('[addTab] Tab added successfully')
       return newState
     }),
 
@@ -597,19 +627,65 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   openDiffTab: (projectId) => {
+    console.log('[openDiffTab] Called for project:', projectId)
     const s = get()
     const existing = s.tabs.find(
       (t) => t.projectId === projectId && t.type === 'diff'
     )
     if (existing) {
+      console.log('[openDiffTab] Found existing diff tab, switching to it:', existing.id)
+      
+      // REPAIR: Ensure the existing tab is in the projectLayouts tree
+      // (handles corrupted state from before the fix)
+      const layout = s.projectLayouts[projectId]
+      if (layout) {
+        const tabsInTree = new Set<string>()
+        const collectTabIds = (pane: Pane) => {
+          if (pane.type === 'tabGroup') {
+            pane.tabs.forEach((t) => tabsInTree.add(t.id))
+          } else if (pane.type === 'split') {
+            pane.children.forEach(collectTabIds)
+          }
+        }
+        collectTabIds(layout.rootPane)
+        
+        if (!tabsInTree.has(existing.id)) {
+          console.log('[openDiffTab] Existing diff tab not in projectLayouts tree, repairing...')
+          const allTabGroups = collectAllTabGroups(layout.rootPane)
+          if (allTabGroups.length > 0) {
+            const newRootPane = addTabToPane(layout.rootPane, allTabGroups[0].id, existing)
+            set({
+              projectLayouts: {
+                ...s.projectLayouts,
+                [projectId]: {
+                  ...layout,
+                  rootPane: newRootPane
+                }
+              },
+              activeTabId: existing.id,
+              activePaneId: allTabGroups[0].id
+            })
+            return
+          }
+        }
+      }
+      
       set({ activeTabId: existing.id })
       return
     }
+    const project = s.projects.find((p) => p.id === projectId)
+    if (!project) {
+      console.log('[openDiffTab] No project found, aborting')
+      return
+    }
+    console.log('[openDiffTab] Creating new diff tab for project:', projectId, 'repoPath:', project.repoPath)
     get().addTab({
       id: crypto.randomUUID(),
       projectId,
       type: 'diff',
+      repoPath: project.repoPath,
     })
+    console.log('[openDiffTab] addTab called, new diff tab should be created')
   },
 
   hydrateState: (data) => {
@@ -631,7 +707,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     console.log('[hydrateState] Final activeProjectId:', activeProjectId)
     const allTabs = data.tabs ?? []
     const projectIds = new Set(projects.map((p) => p.id))
-    const validTabs = allTabs.filter((t) => t.projectId && projectIds.has(t.projectId))
+    
+    /**
+     * Filter tabs to only include valid ones with required fields.
+     * 
+     * BUG FIX: Handle corrupted state where diff tabs may be missing repoPath
+     * due to previous version of code. Diff tabs now require repoPath, but
+     * old persisted state may have diff tabs without it. We filter these out
+     * to prevent crashes when the DiffViewer tries to load with empty repoPath.
+     */
+    const validTabs = allTabs.filter((t) => {
+      // Basic validation: must have projectId that exists
+      if (!t.projectId || !projectIds.has(t.projectId)) return false
+      
+      // Diff tabs must have a repoPath (handles corrupted state from old versions)
+      if (t.type === 'diff' && !t.repoPath) {
+        console.warn(`[hydrateState] Filtering out corrupted diff tab ${t.id} without repoPath`)
+        return false
+      }
+      
+      return true
+    })
     console.log('[hydrateState] Tabs count:', allTabs.length, 'valid:', validTabs.length)
     const savedActiveTabId = data.activeTabId ?? null
     const activeTabId = savedActiveTabId && validTabs.some((t) => t.id === savedActiveTabId)
@@ -639,10 +735,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       : (validTabs.find((t) => t.projectId === activeProjectId)?.id ?? null)
     
     /**
-     * Layout Migration:
-     * If projectLayouts doesn't exist in persisted data (older version or first run),
-     * migrate from flat tabs to tree structure by creating a single TabGroup per project
-     * containing all that project's tabs.
+     * Layout Migration & Repair:
+     * 1. If projectLayouts doesn't exist, create from flat tabs (migration)
+     * 2. Repair corrupted state: ensure all tabs in flat array are also in projectLayouts tree
+     *    This fixes the bug where tabs existed in state but weren't visible in UI
      */
     let projectLayouts = data.projectLayouts ?? {}
     if (Object.keys(projectLayouts).length === 0 && validTabs.length > 0) {
@@ -658,6 +754,44 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
       console.log('[hydrateState] Layout migration complete:', Object.keys(projectLayouts).length, 'projects')
+    } else if (validTabs.length > 0) {
+      // REPAIR: Ensure all tabs are in the projectLayouts tree
+      console.log('[hydrateState] Checking for orphaned tabs not in projectLayouts...')
+      for (const project of projects) {
+        const layout = projectLayouts[project.id]
+        if (!layout) continue
+        
+        const projectTabs = validTabs.filter((t) => t.projectId === project.id)
+        const tabsInTree = new Set<string>()
+        
+        // Collect all tab IDs currently in the tree
+        const collectTabIds = (pane: Pane) => {
+          if (pane.type === 'tabGroup') {
+            pane.tabs.forEach((t) => tabsInTree.add(t.id))
+          } else if (pane.type === 'split') {
+            pane.children.forEach(collectTabIds)
+          }
+        }
+        collectTabIds(layout.rootPane)
+        
+        // Find tabs not in tree
+        const orphanedTabs = projectTabs.filter((t) => !tabsInTree.has(t.id))
+        if (orphanedTabs.length > 0) {
+          console.log(`[hydrateState] Found ${orphanedTabs.length} orphaned tabs for project ${project.id}, repairing...`)
+          // Add orphaned tabs to the first TabGroup
+          let newRootPane = layout.rootPane
+          for (const tab of orphanedTabs) {
+            const allTabGroups = collectAllTabGroups(newRootPane)
+            if (allTabGroups.length > 0) {
+              newRootPane = addTabToPane(newRootPane, allTabGroups[0].id, tab)
+            }
+          }
+          projectLayouts[project.id] = {
+            ...layout,
+            rootPane: newRootPane
+          }
+        }
+      }
     }
     
     set({

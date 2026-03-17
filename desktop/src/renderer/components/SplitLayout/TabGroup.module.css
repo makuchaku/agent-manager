@@ -97,6 +97,17 @@
   font-size: 10px;
 }
 
+/* File button styling */
+.fileButton {
+  width: 32px;
+  font-size: 12px;
+}
+
+.fileIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
 /* Divider between shell buttons and split button */
 .controlDivider {
   width: 1px;

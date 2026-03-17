@@ -20,7 +20,7 @@ export type Tab = {
 } & (
   | { type: 'terminal'; title: string; ptyId: string }
   | { type: 'file'; filePath: string; unsaved?: boolean }
-  | { type: 'diff' }
+  | { type: 'diff'; repoPath: string }
 )
 
 export type RightPanelMode = 'gemini' | 'files' | 'changes'

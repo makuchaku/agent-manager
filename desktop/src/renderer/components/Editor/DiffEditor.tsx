@@ -77,6 +77,8 @@ interface DiffFileSectionProps {
   inline: boolean
   repoPath: string
   onOpenFile: (filePath: string) => void
+  diffTheme: string
+  diffThemeType: string
 }
 
 const DiffFileSection = memo(function DiffFileSection({
@@ -84,6 +86,8 @@ const DiffFileSection = memo(function DiffFileSection({
   inline,
   repoPath,
   onOpenFile,
+  diffTheme,
+  diffThemeType,
 }: DiffFileSectionProps) {
   const parts = data.filePath.split('/')
   const fileName = parts.pop()
@@ -243,15 +247,18 @@ export function DiffViewer({ repoPath, active }: Props) {
   useEffect(() => {
     const handler = (e: Event) => {
       const filePath = (e as CustomEvent<string>).detail
+      console.log('[DiffEditor] Received scroll-to-file event for:', filePath)
+      console.log('[DiffEditor] Current files loaded:', files.length)
       // Small delay to let tab render if newly created
       requestAnimationFrame(() => {
         const el = document.getElementById(`diff-${filePath}`)
+        console.log('[DiffEditor] Looking for element:', `diff-${filePath}`, 'found:', !!el)
         el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       })
     }
     window.addEventListener('diff:scrollToFile', handler)
     return () => window.removeEventListener('diff:scrollToFile', handler)
-  }, [])
+  }, [files])
 
   // IntersectionObserver to highlight active file in strip
   useEffect(() => {
@@ -335,6 +342,8 @@ export function DiffViewer({ repoPath, active }: Props) {
             inline={inline}
             repoPath={repoPath}
             onOpenFile={openFileTab}
+            diffTheme={diffTheme}
+            diffThemeType={diffThemeType}
           />
         ))}
       </div>
