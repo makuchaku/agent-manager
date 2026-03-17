@@ -90,52 +90,6 @@ const api = {
       ipcRenderer.invoke(IPC.APP_ADD_PROJECT_PATH, dirPath),
   },
 
-  agent: {
-    onNotifyProject: (callback: (projectId: string) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, projectId: string) => callback(projectId)
-      ipcRenderer.on(IPC.AGENT_NOTIFY_PROJECT, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.AGENT_NOTIFY_PROJECT, listener)
-      }
-    },
-    onActivityUpdate: (callback: (projectIds: string[]) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, projectIds: string[]) => callback(projectIds)
-      ipcRenderer.on(IPC.AGENT_ACTIVITY_UPDATE, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.AGENT_ACTIVITY_UPDATE, listener)
-      }
-    },
-  },
-
-  claude: {
-    trustPath: (dirPath: string) =>
-      ipcRenderer.invoke(IPC.CLAUDE_TRUST_PATH, dirPath),
-    installHooks: () =>
-      ipcRenderer.invoke(IPC.CLAUDE_INSTALL_HOOKS),
-    uninstallHooks: () =>
-      ipcRenderer.invoke(IPC.CLAUDE_UNINSTALL_HOOKS),
-    checkHooks: () =>
-      ipcRenderer.invoke(IPC.CLAUDE_CHECK_HOOKS),
-  },
-
-  codex: {
-    installNotify: () =>
-      ipcRenderer.invoke(IPC.CODEX_INSTALL_NOTIFY),
-    uninstallNotify: () =>
-      ipcRenderer.invoke(IPC.CODEX_UNINSTALL_NOTIFY),
-    checkNotify: () =>
-      ipcRenderer.invoke(IPC.CODEX_CHECK_NOTIFY),
-  },
-
-  pi: {
-    installActivityExtension: () =>
-      ipcRenderer.invoke(IPC.PI_INSTALL_ACTIVITY_EXTENSION),
-    uninstallActivityExtension: () =>
-      ipcRenderer.invoke(IPC.PI_UNINSTALL_ACTIVITY_EXTENSION),
-    checkActivityExtension: () =>
-      ipcRenderer.invoke(IPC.PI_CHECK_ACTIVITY_EXTENSION),
-  },
-
    ui: {
      onResetLayout: (callback: () => void) => {
        const listener = (_event: Electron.IpcRendererEvent) => callback()

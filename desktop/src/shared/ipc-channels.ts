@@ -37,26 +37,6 @@ export const IPC = {
   APP_SELECT_DIRECTORY: 'app:select-directory',
   APP_ADD_PROJECT_PATH: 'app:add-project-path',
 
-  // Agent activity integration
-  AGENT_NOTIFY_PROJECT: 'agent:notify-project',
-  AGENT_ACTIVITY_UPDATE: 'agent:activity-update',
-
-  // Claude Code integration
-  CLAUDE_TRUST_PATH: 'claude:trust-path',
-  CLAUDE_INSTALL_HOOKS: 'claude:install-hooks',
-  CLAUDE_UNINSTALL_HOOKS: 'claude:uninstall-hooks',
-  CLAUDE_CHECK_HOOKS: 'claude:check-hooks',
-
-  // Codex integration
-  CODEX_INSTALL_NOTIFY: 'codex:install-notify',
-  CODEX_UNINSTALL_NOTIFY: 'codex:uninstall-notify',
-  CODEX_CHECK_NOTIFY: 'codex:check-notify',
-
-  // Pi integration
-  PI_INSTALL_ACTIVITY_EXTENSION: 'pi:install-activity-extension',
-  PI_UNINSTALL_ACTIVITY_EXTENSION: 'pi:uninstall-activity-extension',
-  PI_CHECK_ACTIVITY_EXTENSION: 'pi:check-activity-extension',
-
   // GitHub operations
   GITHUB_GET_PR_STATUSES: 'github:get-pr-statuses',
   GITHUB_LIST_OPEN_PRS: 'github:list-open-prs',

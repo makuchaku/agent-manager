@@ -88,7 +88,6 @@ export function Sidebar() {
   const dismissConfirmDialog = useAppStore((s) => s.dismissConfirmDialog);
   const toggleSettings = useAppStore((s) => s.toggleSettings);
   const unreadProjectIds = useAppStore((s) => s.unreadProjectIds);
-  const activeAgentProjectIds = useAppStore((s) => s.activeAgentProjectIds);
   const updateProject = useAppStore((s) => s.updateProject);
   const checkoutBranch = useAppStore((s) => s.checkoutBranch);
   const createBranch = useAppStore((s) => s.createBranch);
@@ -305,9 +304,7 @@ export function Sidebar() {
                   <div
                     className={`${styles.workspaceItem} ${
                       project.id === activeProjectId ? styles.active : ""
-                    } ${unreadProjectIds.has(project.id) ? styles.unread : ""} ${
-                      activeAgentProjectIds.has(project.id) ? styles.claudeActive : ""
-                    }`}
+                    } ${unreadProjectIds.has(project.id) ? styles.unread : ""}`}
                     onClick={() => handleSelectProject(project.id)}
                   >
                     <span className={styles.workspaceIcon}>~</span>

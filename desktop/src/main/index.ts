@@ -2,11 +2,9 @@ import { app, BrowserWindow, Menu, shell } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
-import { NotificationWatcher } from './notification-watcher'
 import { IPC } from '../shared/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
-let notificationWatcher: NotificationWatcher | null = null
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -70,7 +68,6 @@ if (process.env.CI_TEST) {
   const { join } = require('path')
   const testData = mkdtempSync(join(require('os').tmpdir(), 'makulabs-manager-test-'))
   app.setPath('userData', testData)
-  process.env.MAKULABS_MANAGER_AGENT_EVENT_DIR ||= join(testData, 'agent-events')
 }
 
 app.whenReady().then(() => {
@@ -175,8 +172,6 @@ app.whenReady().then(() => {
   }
 
   registerIpcHandlers()
-  notificationWatcher = new NotificationWatcher()
-  notificationWatcher.start()
   createWindow()
 
   app.on('activate', () => {
@@ -190,8 +185,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
-})
-
-app.on('before-quit', () => {
-  notificationWatcher?.stop()
 })

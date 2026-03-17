@@ -26,36 +26,6 @@ export function App() {
   usePrStatusPoller()
 
   useEffect(() => {
-    if (!window.api?.agent) return
-    const unsub = window.api.agent.onNotifyProject((projectId: string) => {
-      const state = useAppStore.getState()
-      if (projectId !== state.activeProjectId) {
-        state.markProjectUnread(projectId)
-      }
-    })
-    return unsub
-  }, [])
-
-  useEffect(() => {
-    if (!window.api?.agent) return
-    let prevActive = new Set<string>()
-    const unsub = window.api.agent.onActivityUpdate((projectIds: string[]) => {
-      const nextActive = new Set(projectIds)
-      const state = useAppStore.getState()
-
-      for (const projectId of prevActive) {
-        if (!nextActive.has(projectId) && projectId !== state.activeProjectId && state.projects.some((p) => p.id === projectId)) {
-          state.markProjectUnread(projectId)
-        }
-      }
-
-      state.setActiveAgentProjects(projectIds)
-      prevActive = nextActive
-    })
-    return unsub
-  }, [])
-
-  useEffect(() => {
     if (!window.api?.ui) return
     const unsub = window.api.ui.onResetLayout(() => {
       useAppStore.getState().resetUILayout()

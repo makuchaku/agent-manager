@@ -130,7 +130,6 @@ export interface AppState {
   toasts: Toast[]
   quickOpenVisible: boolean
   unreadProjectIds: Set<string>
-  activeAgentProjectIds: Set<string>
   prStatusMap: Map<string, PrInfo | null>
   ghAvailability: Map<string, boolean>
 
@@ -186,7 +185,6 @@ export interface AppState {
 
   markProjectUnread: (projectId: string) => void
   clearProjectUnread: (projectId: string) => void
-   setActiveAgentProjects: (projectIds: string[]) => void
    resetUILayout: () => void
 
   setPrStatuses: (projectId: string, statuses: Record<string, PrInfo | null>) => void

@@ -110,7 +110,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   toasts: [],
   quickOpenVisible: false,
   unreadProjectIds: new Set<string>(),
-  activeAgentProjectIds: new Set<string>(),
   prStatusMap: new Map(),
   ghAvailability: new Map(),
   
@@ -143,7 +142,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newProjects = s.projects.filter((p) => p.id !== id)
       const newTabs = s.tabs.filter((t) => t.projectId !== id)
       const newUnread = new Set(Array.from(s.unreadProjectIds).filter((pid) => pid !== id))
-      const newActiveAgent = new Set(Array.from(s.activeAgentProjectIds).filter((pid) => pid !== id))
       const newPrStatusMap = new Map(
         Array.from(s.prStatusMap.entries()).filter(([key]) => !key.startsWith(`${id}:`))
       )
@@ -165,7 +163,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         projects: newProjects,
         tabs: newTabs,
         unreadProjectIds: newUnread,
-        activeAgentProjectIds: newActiveAgent,
         prStatusMap: newPrStatusMap,
         ghAvailability: newGhAvailability,
         activeProjectId,
@@ -582,9 +579,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       newUnread.delete(projectId)
       return { unreadProjectIds: newUnread }
     }),
-
-  setActiveAgentProjects: (projectIds) =>
-    set(() => ({ activeAgentProjectIds: new Set(projectIds) })),
 
   setPrStatuses: (projectId, statuses) =>
     set((s) => {
