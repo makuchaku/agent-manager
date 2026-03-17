@@ -138,7 +138,7 @@ export function FileEditor({ tabId, filePath, active }: Props) {
           fontFamily: "'SF Mono', Menlo, 'Cascadia Code', monospace",
           fontSize: settings.editorFontSize,
           lineHeight: 20,
-          minimap: { enabled: false },
+          minimap: { enabled: true },
           scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
           padding: { top: 8, bottom: 8 },
           renderLineHighlight: 'line',
