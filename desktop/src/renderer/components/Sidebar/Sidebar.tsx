@@ -335,8 +335,8 @@ export function Sidebar() {
                       setExpandedProjects(newSet);
                     }}
                   >
-                    <span className={styles.actionIcon}>
-                      {isCurrentlyExpanded ? "▼" : "▶"}
+                    <span className={`${styles.chevron} ${isCurrentlyExpanded ? styles.chevronOpen : ""}`}>
+                      ▶
                     </span>
                     <span>Branches {isLoading && "(loading...)"}</span>
                   </button>
