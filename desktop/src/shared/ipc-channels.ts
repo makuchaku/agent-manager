@@ -57,14 +57,6 @@ export const IPC = {
   PI_UNINSTALL_ACTIVITY_EXTENSION: 'pi:uninstall-activity-extension',
   PI_CHECK_ACTIVITY_EXTENSION: 'pi:check-activity-extension',
 
-  // Automation operations
-  AUTOMATION_CREATE: 'automation:create',
-  AUTOMATION_UPDATE: 'automation:update',
-  AUTOMATION_DELETE: 'automation:delete',
-  AUTOMATION_RUN_NOW: 'automation:run-now',
-  AUTOMATION_STOP: 'automation:stop',
-  AUTOMATION_RUN_STARTED: 'automation:run-started',
-
   // GitHub operations
   GITHUB_GET_PR_STATUSES: 'github:get-pr-statuses',
   GITHUB_LIST_OPEN_PRS: 'github:list-open-prs',

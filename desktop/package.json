@@ -26,7 +26,6 @@
     "allotment": "^1.20.5",
     "electron-vite": "^5.0.0",
     "monaco-editor": "^0.55.1",
-    "node-cron": "^4.2.1",
     "node-pty": "^1.1.0",
     "react": "^19.2.4",
     "react-arborist": "^3.4.3",

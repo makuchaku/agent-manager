@@ -87,7 +87,6 @@ export function Sidebar() {
   const showConfirmDialog = useAppStore((s) => s.showConfirmDialog);
   const dismissConfirmDialog = useAppStore((s) => s.dismissConfirmDialog);
   const toggleSettings = useAppStore((s) => s.toggleSettings);
-  const toggleAutomations = useAppStore((s) => s.toggleAutomations);
   const unreadProjectIds = useAppStore((s) => s.unreadProjectIds);
   const activeAgentProjectIds = useAppStore((s) => s.activeAgentProjectIds);
   const updateProject = useAppStore((s) => s.updateProject);
@@ -433,12 +432,6 @@ export function Sidebar() {
           <button className={styles.actionButton} onClick={handleAddProject}>
             <span className={styles.actionIcon}>+</span>
             <span>Add project</span>
-          </button>
-        </Tooltip>
-        <Tooltip label="Automations">
-          <button className={styles.actionButton} onClick={toggleAutomations}>
-            <span className={styles.actionIcon}>⏱</span>
-            <span>Automations</span>
           </button>
         </Tooltip>
         <Tooltip label="Settings" shortcut="⌘,">

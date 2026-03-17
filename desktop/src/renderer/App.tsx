@@ -7,7 +7,6 @@ import { TabBar } from './components/TabBar/TabBar'
 import { SplitPanel } from './components/SplitLayout/SplitPanel'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
-import { AutomationsPanel } from './components/Automations/AutomationsPanel'
 import { QuickOpen } from './components/QuickOpen/QuickOpen'
 import { ToastContainer } from './components/Toast/Toast'
 import { useShortcuts } from './hooks/useShortcuts'
@@ -73,7 +72,6 @@ export function App() {
   const projects = useAppStore((s) => s.projects)
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   const settingsOpen = useAppStore((s) => s.settingsOpen)
-  const automationsOpen = useAppStore((s) => s.automationsOpen)
   const quickOpenVisible = useAppStore((s) => s.quickOpenVisible)
   const setRightPanelSize = useAppStore((s) => s.setRightPanelSize)
   const projectLayouts = useAppStore((s) => s.projectLayouts)
@@ -99,8 +97,6 @@ export function App() {
       <div className={styles.layout}>
         {settingsOpen ? (
           <SettingsPanel />
-        ) : automationsOpen ? (
-          <AutomationsPanel />
         ) : (
           <Allotment
             onResize={(sizes) => {

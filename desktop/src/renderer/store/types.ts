@@ -5,18 +5,6 @@ export interface StartupCommand {
   command: string
 }
 
-export interface Automation {
-  id: string
-  name: string
-  projectId: string
-  prompt: string
-  cronExpression: string
-  enabled: boolean
-  createdAt: number
-  lastRunAt?: number
-  lastRunStatus?: 'success' | 'failed' | 'timeout'
-}
-
 export interface Project {
   id: string
   name: string
@@ -128,7 +116,6 @@ export interface ConfirmDialogState {
 export interface AppState {
   projects: Project[]
   tabs: Tab[]
-  automations: Automation[]
   activeProjectId: string | null
   activeTabId: string | null
   lastActiveTabByProject: Record<string, string>
@@ -139,7 +126,6 @@ export interface AppState {
   lastSavedTabId: string | null
   settings: Settings
   settingsOpen: boolean
-  automationsOpen: boolean
   confirmDialog: ConfirmDialogState | null
   toasts: Toast[]
   quickOpenVisible: boolean
@@ -191,7 +177,6 @@ export interface AppState {
 
   updateSettings: (partial: Partial<Settings>) => void
   toggleSettings: () => void
-  toggleAutomations: () => void
   showConfirmDialog: (dialog: ConfirmDialogState) => void
   dismissConfirmDialog: () => void
   addToast: (toast: Toast) => void
@@ -206,10 +191,6 @@ export interface AppState {
 
   setPrStatuses: (projectId: string, statuses: Record<string, PrInfo | null>) => void
   setGhAvailability: (projectId: string, available: boolean) => void
-
-  addAutomation: (automation: Automation) => void
-  updateAutomation: (id: string, partial: Partial<Omit<Automation, 'id'>>) => void
-  removeAutomation: (id: string) => void
 
   hydrateState: (data: PersistedState) => void
 
@@ -242,7 +223,6 @@ export interface AppState {
 export interface PersistedState {
   projects: Project[]
   tabs?: Tab[]
-  automations?: Automation[]
   activeProjectId?: string | null
   activeTabId?: string | null
   lastActiveTabByProject?: Record<string, string>

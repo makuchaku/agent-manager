@@ -96,7 +96,6 @@ function executeTerminalStartupCommand(ptyId: string, command: string) {
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   tabs: [],
-  automations: [],
   activeProjectId: null,
   activeTabId: null,
   lastActiveTabByProject: {},
@@ -107,7 +106,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   lastSavedTabId: null,
   settings: { ...DEFAULT_SETTINGS },
   settingsOpen: false,
-  automationsOpen: false,
   confirmDialog: null,
   toasts: [],
   quickOpenVisible: false,
@@ -142,13 +140,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   removeProject: (id) =>
     set((s) => {
-      const projectAutomations = s.automations.filter((a) => a.projectId === id)
-      for (const a of projectAutomations) {
-        window.api.automations.delete(a.id)
-      }
       const newProjects = s.projects.filter((p) => p.id !== id)
       const newTabs = s.tabs.filter((t) => t.projectId !== id)
-      const newAutomations = s.automations.filter((a) => a.projectId !== id)
       const newUnread = new Set(Array.from(s.unreadProjectIds).filter((pid) => pid !== id))
       const newActiveAgent = new Set(Array.from(s.activeAgentProjectIds).filter((pid) => pid !== id))
       const newPrStatusMap = new Map(
@@ -171,7 +164,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return {
         projects: newProjects,
         tabs: newTabs,
-        automations: newAutomations,
         unreadProjectIds: newUnread,
         activeAgentProjectIds: newActiveAgent,
         prStatusMap: newPrStatusMap,
@@ -554,8 +546,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: (partial) =>
     set((s) => ({ settings: { ...s.settings, ...partial } })),
 
-  toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen, automationsOpen: false })),
-  toggleAutomations: () => set((s) => ({ automationsOpen: !s.automationsOpen, settingsOpen: false })),
+  toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen })),
 
   showConfirmDialog: (dialog) => set({ confirmDialog: dialog }),
   dismissConfirmDialog: () => set({ confirmDialog: null }),
@@ -610,17 +601,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       newMap.set(projectId, available)
       return { ghAvailability: newMap }
     }),
-
-  addAutomation: (automation) =>
-    set((s) => ({ automations: [...s.automations, automation] })),
-
-  updateAutomation: (id, partial) =>
-    set((s) => ({
-      automations: s.automations.map((a) => (a.id === id ? { ...a, ...partial } : a)),
-    })),
-
-  removeAutomation: (id) =>
-    set((s) => ({ automations: s.automations.filter((a) => a.id !== id) })),
 
   openDiffTab: (projectId) => {
     const s = get()
@@ -689,7 +669,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       projects,
       tabs: validTabs,
-      automations: data.automations ?? [],
       activeProjectId,
       activeTabId,
       lastActiveTabByProject: data.lastActiveTabByProject ?? {},
@@ -880,7 +859,6 @@ function getPersistedSlice(state: AppState): PersistedState {
   return {
     projects: state.projects,
     tabs: state.tabs,
-    automations: state.automations,
     activeProjectId: state.activeProjectId,
     activeTabId: state.activeTabId,
     lastActiveTabByProject: state.lastActiveTabByProject,
@@ -906,7 +884,6 @@ useAppStore.subscribe((state, prevState) => {
     state.projects !== prevState.projects ||
     state.tabs !== prevState.tabs ||
     state.activeTabId !== prevState.activeTabId ||
-    state.automations !== prevState.automations ||
     state.activeProjectId !== prevState.activeProjectId ||
     state.settings !== prevState.settings ||
     state.rightPanelMode !== prevState.rightPanelMode ||
@@ -990,39 +967,4 @@ export async function hydrateFromDisk(): Promise<void> {
   } catch (err) {
     console.error('Failed to reconcile PTY tabs:', err)
   }
-
-  // Schedule all enabled automations on startup
-  const state = useAppStore.getState()
-  for (const automation of state.automations) {
-    if (!automation.enabled) continue
-    const project = state.projects.find((p) => p.id === automation.projectId)
-    if (!project) continue
-    window.api.automations.create({
-      ...automation,
-      repoPath: project.repoPath,
-    })
-  }
-
-  // Listen for automation run-started events from main process
-  window.api.automations.onRunStarted((data) => {
-    const store = useAppStore.getState()
-    const { automationId, automationName, projectId, ptyId, branch } = data
-    const project = store.projects.find((p) => p.id === projectId)
-    if (!project) return
-
-    // Update project's branch
-    store.updateProject(projectId, { branch: branch || project.branch })
-
-    // Create terminal tab for the run
-    store.addTab({
-      id: crypto.randomUUID(),
-      projectId,
-      type: 'terminal',
-      title: automationName,
-      ptyId,
-    })
-
-    // Update automation lastRunAt
-    store.updateAutomation(automationId, { lastRunAt: Date.now() })
-  })
 }

@@ -9,8 +9,6 @@ import { PtyManager } from './pty-manager'
 import { GitService } from './git-service'
 import { GithubService } from './github-service'
 import { FileService, type FileNode } from './file-service'
-import { AutomationScheduler } from './automation-scheduler'
-import type { AutomationConfig } from '../shared/automation-types'
 import { trustPathForClaude, loadClaudeSettings, saveClaudeSettings, loadJsonFile, saveJsonFile } from './claude-config'
 import { loadCodexConfigText, saveCodexConfigText } from './codex-config'
 import {
@@ -20,11 +18,6 @@ import {
 } from './pi-config'
 
 const ptyManager = new PtyManager()
-const automationScheduler = new AutomationScheduler(ptyManager)
-
-export async function catchUpAutomationsOnWake(now = new Date()): Promise<void> {
-  await automationScheduler.catchUpOnWake(now)
-}
 
 interface FsWatchSubscriber {
   webContents: WebContents
@@ -629,27 +622,6 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.PI_UNINSTALL_ACTIVITY_EXTENSION, async () => {
     await uninstallPiActivityExtension()
     return { success: true }
-  })
-
-  // Automation handlers
-  ipcMain.handle(IPC.AUTOMATION_CREATE, async (_e, automation: AutomationConfig) => {
-    automationScheduler.schedule(automation)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_UPDATE, async (_e, automation: AutomationConfig) => {
-    automationScheduler.schedule(automation)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_DELETE, async (_e, automationId: string) => {
-    automationScheduler.unschedule(automationId)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_RUN_NOW, async (_e, automation: AutomationConfig) => {
-    automationScheduler.runNow(automation)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_STOP, async (_e, automationId: string) => {
-    automationScheduler.unschedule(automationId)
   })
 
   /**

@@ -1,23 +1,12 @@
-import { app, BrowserWindow, Menu, shell, powerMonitor } from 'electron'
+import { app, BrowserWindow, Menu, shell } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
-import { catchUpAutomationsOnWake, registerIpcHandlers } from './ipc'
+import { registerIpcHandlers } from './ipc'
 import { NotificationWatcher } from './notification-watcher'
 import { IPC } from '../shared/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
 let notificationWatcher: NotificationWatcher | null = null
-let lastWakeCatchUpAt = 0
-
-function triggerAutomationWakeCatchUp(reason: 'resume' | 'unlock-screen'): void {
-  const now = Date.now()
-  if (now - lastWakeCatchUpAt < 2000) return
-  lastWakeCatchUpAt = now
-
-  catchUpAutomationsOnWake(new Date(now)).catch((err) => {
-    console.error(`[automation] wake catch-up failed (${reason}):`, err)
-  })
-}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -186,8 +175,6 @@ app.whenReady().then(() => {
   }
 
   registerIpcHandlers()
-  powerMonitor.on('resume', () => triggerAutomationWakeCatchUp('resume'))
-  powerMonitor.on('unlock-screen', () => triggerAutomationWakeCatchUp('unlock-screen'))
   notificationWatcher = new NotificationWatcher()
   notificationWatcher.start()
   createWindow()
