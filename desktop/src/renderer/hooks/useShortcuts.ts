@@ -208,19 +208,27 @@ export function useShortcuts() {
          return
        }
 
-      // ── Workspace creation ──
-      // Cmd+N — new workspace dialog
-      if (!shift && !alt && e.key === 'n') {
-        consume()
-        const project = store.activeProject()
-        if (project) {
-          store.openWorkspaceDialog(project.id)
-        } else if (store.projects.length === 1) {
-          store.openWorkspaceDialog(store.projects[0].id)
+       // ── Workspace creation ──
+       // Cmd+N — new workspace dialog
+       if (!shift && !alt && e.key === 'n') {
+         consume()
+         const project = store.activeProject()
+         if (project) {
+           store.openWorkspaceDialog(project.id)
+         } else if (store.projects.length === 1) {
+           store.openWorkspaceDialog(store.projects[0].id)
+         }
+         return
+       }
+
+        // ── Split Operations ──
+        // Cmd+\ — split current tab vertically (side-by-side)
+        if (!shift && !alt && e.key === '\\') {
+          consume()
+          store.splitCurrentTab('vertical')
+          return
         }
-        return
-      }
-    }
+     }
 
     // Capture phase: runs before terminal handlers on the focused textarea.
     window.addEventListener('keydown', handler, true)

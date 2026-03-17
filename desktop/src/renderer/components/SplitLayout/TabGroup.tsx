@@ -1,8 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useAppStore } from '../../store/app-store'
 import type { Tab, SplitDirection } from '../../store/types'
-import { TabBar } from '../TabBar/TabBar'
-import { TabSplitDropZone } from './TabSplitDropZone'
+import { TabContent } from './TabContent'
 import styles from './TabGroup.module.css'
 
 interface TabGroupProps {
@@ -13,146 +12,205 @@ interface TabGroupProps {
 }
 
 /**
- * TabGroup — Container for tabs within a single pane
+ * TabGroup — Renders a tab bar and content area for a group of tabs
  * 
- * Renders a tab bar and manages tab activation and splitting.
- * Each TabGroup is an independent "editor group" that can be split.
+ * This is the leaf node in the split layout tree. Each TabGroup contains:
+ * - A tab bar showing all tabs in this group with split buttons
+ * - Content area showing the active tab
  * 
- * Features:
- * - Displays tabs horizontally in a tab bar
- * - Shows split drop zones for drag-to-split functionality
- * - Handles tab activation within this pane only
- * - Manages active pane focus state
- * 
- * @example
- * <TabGroup 
- *   paneId="pane-123"
- *   tabs={[...]}
- *   activeTabId="tab-456"
- *   projectId="proj-789"
- * />
+ * Architecture:
+ * - Used by SplitPanel as the leaf node in the pane tree
+ * - Manages which tab is active within this specific group
+ * - Renders TabContent for the active tab
+ * - Sets activePaneId when clicked so split operations know which pane to target
+ * - Includes split buttons in the tab bar for creating new splits
  */
 export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps) {
-  const setActivePane = useAppStore((s) => s.setActivePane)
-  const splitPane = useAppStore((s) => s.splitPane)
-  const moveTabToPane = useAppStore((s) => s.moveTabToPane)
+  const setActiveTab = useAppStore((s) => s.setActiveTab)
+  const setActivePaneId = useAppStore((s) => s.setActivePaneId)
+  const removeTab = useAppStore((s) => s.removeTab)
+  const splitCurrentTab = useAppStore((s) => s.splitCurrentTab)
+  const addTab = useAppStore((s) => s.addTab)
+  const createTerminalForActiveProject = useAppStore((s) => s.createTerminalForActiveProject)
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   
-  // Track if this pane is currently active (has focus)
-  const isActivePane = activeProjectId === projectId // Simplified check
-  
-  // Drag state for split operations
-  const [isDragging, setIsDragging] = useState(false)
-  const [activeDropZone, setActiveDropZone] = useState<{
-    direction: SplitDirection
-    position: 'before' | 'after'
-  } | null>(null)
+  // Find the active tab object
+  const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0]
+  const isEmpty = tabs.length === 0
 
   /**
-   * Handle click to set this pane as active
+   * Handle clicking a tab to activate it
+   * Also sets this pane as the active pane for split operations
    */
-  const handlePaneClick = useCallback(() => {
-    if (activeProjectId) {
-      setActivePane(activeProjectId, paneId)
-    }
-  }, [activeProjectId, paneId, setActivePane])
+  const handleTabClick = useCallback((tabId: string) => {
+    setActiveTab(tabId)
+    setActivePaneId(paneId)
+  }, [setActiveTab, setActivePaneId, paneId])
 
   /**
-   * Handle tab drag start from TabBar
+   * Handle creating a new tab in THIS specific pane
    */
-  const handleDragStart = useCallback(() => {
-    setIsDragging(true)
-  }, [])
-
-  /**
-   * Handle tab drag end
-   */
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false)
-    setActiveDropZone(null)
-  }, [])
-
-  /**
-   * Handle drop zone activation during drag
-   */
-  const handleDropZoneActivate = useCallback((direction: SplitDirection, position: 'before' | 'after') => {
-    setActiveDropZone({ direction, position })
-  }, [])
-
-  /**
-   * Handle drop zone deactivation
-   */
-  const handleDropZoneDeactivate = useCallback(() => {
-    setActiveDropZone(null)
-  }, [])
-
-  /**
-   * Execute split when tab is dropped on a zone
-   */
-  const handleSplit = useCallback((
-    draggedTabId: string, 
-    sourcePaneId: string,
-    direction: SplitDirection,
-    position: 'before' | 'after'
-  ) => {
-    // If dropping in same pane, we might want to reorder or ignore
-    if (sourcePaneId === paneId) {
-      // For now, ignore drops on same pane
-      // Could be extended to support tab reordering within pane
+  const handleNewTab = useCallback(async () => {
+    console.log('[TabGroup] New tab button clicked for pane:', paneId)
+    
+    // First, set this pane as the active pane so the tab goes to the right place
+    setActivePaneId(paneId)
+    
+    // Get current state
+    const state = useAppStore.getState()
+    const project = state.projects.find(p => p.id === projectId)
+    if (!project) {
+      console.log('[TabGroup] No project found')
       return
     }
-
-    // Execute the split
-    splitPane({
-      sourcePaneId,
-      targetPaneId: paneId,
-      direction,
-      tabId: draggedTabId
-    })
-  }, [paneId, splitPane])
+    
+    // Create the terminal
+    const shell = state.settings.defaultShell || undefined
+    try {
+      const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: projectId })
+      const projectTabs = state.tabs.filter((t) => t.projectId === projectId)
+      const termCount = projectTabs.filter((t) => t.type === 'terminal').length
+      
+      const newTab: Tab = {
+        id: crypto.randomUUID(),
+        projectId,
+        type: 'terminal',
+        title: `Terminal ${termCount + 1}`,
+        ptyId,
+      }
+      
+      // Add the tab to the flat array and to the active pane
+      addTab(newTab)
+      
+      // Execute startup command
+      const startupCmd = state.settings.terminalStartupCommand
+      if (startupCmd) {
+        setTimeout(() => {
+          window.api.pty.write(ptyId, startupCmd + '\r\n')
+        }, 500)
+      }
+      
+      console.log('[TabGroup] New tab created in pane:', paneId)
+    } catch (err) {
+      console.error('[TabGroup] Failed to create terminal:', err)
+    }
+  }, [paneId, projectId, setActivePaneId, addTab])
 
   /**
-   * Handle moving a tab to this pane (center drop zone)
+   * Handle closing a tab
    */
-  const handleMoveTab = useCallback((
-    draggedTabId: string,
-    sourcePaneId: string
-  ) => {
-    if (sourcePaneId === paneId) return // Same pane, ignore
+  const handleCloseTab = useCallback((e: React.MouseEvent, tabId: string) => {
+    console.log('[TabGroup] Close tab clicked:', tabId)
+    e.stopPropagation()
+    removeTab(tabId)
+  }, [removeTab])
 
-    moveTabToPane({
-      tabId: draggedTabId,
-      sourcePaneId,
-      targetPaneId: paneId,
-      position: 'end' // Add to end of this pane
-    })
-  }, [paneId, moveTabToPane])
+  /**
+   * Handle clicking the pane background to set it as active
+   */
+  const handlePaneClick = useCallback(() => {
+    setActivePaneId(paneId)
+  }, [setActivePaneId, paneId])
+
+  /**
+   * Handle splitting the current tab
+   */
+  const handleSplit = useCallback((direction: SplitDirection) => {
+    console.log('[TabGroup] Split clicked:', direction, 'activeTab:', activeTab?.id)
+    if (!activeTab) {
+      console.log('[TabGroup] No active tab to split')
+      return
+    }
+    
+    // Pass the tab ID directly to avoid async state issues
+    console.log('[TabGroup] Calling splitCurrentTab with tab:', activeTab.id)
+    splitCurrentTab(direction, activeTab.id)
+  }, [splitCurrentTab, activeTab])
 
   return (
     <div 
-      className={`${styles.tabGroup} ${isActivePane ? styles.activePane : ''}`}
+      className={styles.tabGroup}
       onClick={handlePaneClick}
     >
-      {/* Tab Bar — scoped to this pane only */}
-      <TabBar
-        paneId={paneId}
-        tabs={tabs}
-        activeTabId={activeTabId}
-        projectId={projectId}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      />
+      {/* Tab Bar with controls */}
+      <div className={styles.tabBar}>
+        {/* Tab list */}
+        <div className={styles.tabList}>
+          {tabs.map((tab) => {
+            const isActive = tab.id === activeTabId
+            const title = tab.type === 'terminal' 
+              ? tab.title 
+              : tab.type === 'file' 
+                ? tab.filePath.split('/').pop() || tab.filePath
+                : 'Changes'
+            
+            return (
+              <div
+                key={tab.id}
+                className={`${styles.tab} ${isActive ? styles.active : ''} ${tab.type === 'file' && tab.unsaved ? styles.unsaved : ''}`}
+                onClick={() => handleTabClick(tab.id)}
+              >
+                {tab.type === 'file' && tab.unsaved && (
+                  <span className={styles.unsavedDot} />
+                )}
+                <span className={styles.tabTitle}>{title}</span>
+                <button
+                  className={styles.closeButton}
+                  onClick={(e) => {
+                    console.log('[TabGroup] Close button clicked for tab:', tab.id)
+                    handleCloseTab(e, tab.id)
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )
+          })}
+          {/* New Tab button - positioned next to the last tab */}
+          <button 
+            className={`${styles.tab} ${styles.newTabButton}`}
+            onClick={(e) => { 
+              console.log('[TabGroup] New tab button clicked')
+              e.stopPropagation()
+              handleNewTab()
+            }}
+            title="New terminal"
+          >
+            <span className={styles.newTabIcon}>+</span>
+          </button>
+        </div>
 
-      {/* Split Drop Zones — only visible during drag */}
-      <TabSplitDropZone
-        paneId={paneId}
-        isActive={isDragging}
-        activeZone={activeDropZone}
-        onActivate={handleDropZoneActivate}
-        onDeactivate={handleDropZoneDeactivate}
-        onSplit={handleSplit}
-        onMoveTab={handleMoveTab}
-      />
+        {/* Controls: Split buttons only */}
+        <div className={styles.controls}>
+          <button 
+            className={styles.controlButton}
+            onClick={(e) => { 
+              console.log('[TabGroup] Vertical split button clicked')
+              e.stopPropagation()
+              handleSplit('vertical')
+            }}
+            title="Split right"
+            disabled={!activeTab}
+          >
+            ◫
+          </button>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className={styles.contentArea}>
+        {isEmpty ? (
+          <div className={styles.empty}>
+            <span>No tabs in this pane</span>
+          </div>
+        ) : activeTab ? (
+          <TabContent tab={activeTab} projectId={projectId} />
+        ) : (
+          <div className={styles.empty}>
+            <span>Select a tab</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

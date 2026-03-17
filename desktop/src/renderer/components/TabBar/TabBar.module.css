@@ -182,6 +182,44 @@
   color: var(--text-primary);
 }
 
+/* ── Split Buttons ── */
+
+.splitButtons {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0 var(--space-3);
+  -webkit-app-region: no-drag;
+}
+
+.splitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-0);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.splitButton:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
+}
+
+.splitButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Spacer (drag region) ── */
 
 .dragSpacer {

@@ -2,6 +2,7 @@
  * TabGroup — CSS Module
  * 
  * Styles for the tab group container within a pane.
+ * Contains both the tab bar and the content area.
  */
 
 .tabGroup {
@@ -14,20 +15,214 @@
   overflow: hidden;
 }
 
-/* Active pane highlight — subtle border to show focus */
-.tabGroup.activePane {
-  box-shadow: inset 0 0 0 1px var(--accent-blue-dim);
+/* ── Tab Bar ── */
+
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  height: var(--tab-height);
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: visible; /* Allow controls to be fully visible */
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
-/* Tab bar container at top */
-.tabBar {
+/* Tab list container - grows to take available space */
+.tabList {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.tabList::-webkit-scrollbar {
+  height: 0;
+}
+
+/* Controls container - right aligned buttons */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  background: var(--surface-0);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+}
+
+.controlButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.controlButton:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-default);
+}
+
+.controlButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Individual Tab ── */
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-6);
+  min-width: 100px;
+  max-width: 200px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  border-right: 1px solid var(--border-subtle);
+  position: relative;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab.active {
+  color: var(--text-primary);
+  background: var(--surface-1);
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-blue);
+}
+
+/* ── Unsaved Indicator ── */
+
+.unsavedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-blue);
   flex-shrink: 0;
 }
 
-/* Content area below tabs */
+/* ── Tab Title ── */
+
+.tabTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* ── Close Button ── */
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.tab:hover .closeButton,
+.tab.active .closeButton {
+  opacity: 1;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+/* ── New Tab Button (styled as a tab) ── */
+
+.newTabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  max-width: 40px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  border: none;
+  background: none;
+  position: static;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.newTabButton:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Override any active tab styling */
+.newTabButton.active,
+.newTabButton.active::after {
+  display: none;
+}
+
+.newTabIcon {
+  font-size: var(--text-lg);
+  font-weight: 300;
+}
+
+/* ── Content Area ── */
+
 .contentArea {
   flex: 1;
   position: relative;
   overflow: hidden;
   min-height: 0; /* Important for flex layout */
+}
+
+.empty {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
 }

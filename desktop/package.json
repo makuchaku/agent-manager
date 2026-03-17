@@ -1,17 +1,17 @@
 {
-"name": "makulabs-manager",
+  "name": "makulabs-manager",
   "productName": "MakuLabs Manager",
   "version": "1.0.0",
   "description": "Mac app for running multiple AI agents in parallel",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "NODE_PATH=./node_modules electron-vite dev",
+    "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "test": "bunx playwright test --project=electron",
-    "rebuild": "bunx electron-rebuild",
+    "test": "npx playwright test --project=electron",
+    "rebuild": "npx electron-rebuild",
     "dist": "electron-vite build && electron-builder --mac --arm64",
-    "postinstall": "bash scripts/patch-electron-dev.sh || true"
+    "postinstall": "node scripts/patch-electron-dev.js || exit 0"
   },
   "keywords": [],
   "author": "",

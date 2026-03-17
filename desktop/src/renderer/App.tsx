@@ -4,9 +4,7 @@ import 'allotment/dist/style.css'
 import { useAppStore } from './store/app-store'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { TabBar } from './components/TabBar/TabBar'
-import { TerminalPanel } from './components/Terminal/TerminalPanel'
-import { FileEditor } from './components/Editor/FileEditor'
-import { DiffViewer } from './components/Editor/DiffEditor'
+import { SplitPanel } from './components/SplitLayout/SplitPanel'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { AutomationsPanel } from './components/Automations/AutomationsPanel'
@@ -15,6 +13,11 @@ import { ToastContainer } from './components/Toast/Toast'
 import { useShortcuts } from './hooks/useShortcuts'
 import { usePrStatusPoller } from './hooks/usePrStatusPoller'
 import styles from './App.module.css'
+import type { Tab } from './store/types'
+import type { Project } from './store/types'
+import { TerminalPanel } from './components/Terminal/TerminalPanel'
+import { FileEditor } from './components/Editor/FileEditor'
+import { DiffViewer } from './components/Editor/DiffEditor'
 
 console.log('[App] Component definition loaded')
 
@@ -73,6 +76,7 @@ export function App() {
   const automationsOpen = useAppStore((s) => s.automationsOpen)
   const quickOpenVisible = useAppStore((s) => s.quickOpenVisible)
   const setRightPanelSize = useAppStore((s) => s.setRightPanelSize)
+  const projectLayouts = useAppStore((s) => s.projectLayouts)
 
   console.log('[App] State: projects count:', projects.length, ', activeProjectId:', activeProjectId, ', activeTabId:', activeTabId)
 
@@ -87,7 +91,8 @@ export function App() {
   const rightPanelOpen = project ? rightPanelOpenRecord[project.id] ?? true : false
   const rightPanelSize = project ? rightPanelSizeRecord[project.id] ?? 320 : 320
 
-  const allTerminals = allTabs.filter((t): t is Extract<typeof t, { type: 'terminal' }> => t.type === 'terminal')
+  // Get the layout for the active project, if any
+  const activeLayout = activeProjectId ? projectLayouts[activeProjectId] : null
 
   return (
     <div className={styles.app}>
@@ -114,44 +119,27 @@ export function App() {
 
             <Allotment.Pane>
               <div className={styles.centerPanel}>
-                <TabBar />
+                {/*
+                  TabBar is only rendered in legacy mode (non-split).
+                  In split layout mode, each TabGroup renders its own tab bar
+                  within the split panels, so we don't need the global TabBar.
+                */}
+                {!activeLayout && <TabBar />}
                 <div className={styles.contentArea}>
-                  {allTerminals.map((t) => (
-                    <TerminalPanel
-                      key={t.id}
-                      ptyId={t.ptyId}
-                      active={t.id === activeTabId}
-                    />
-                  ))}
-
-                  {!activeTab ? (
-                    <div className={styles.welcome}>
-                      <div className={styles.welcomeLogo}>MakuLabs Manager</div>
-                      <div className={styles.welcomeHint}>
-                        Add a project to get started, or press
-                        <span className={styles.welcomeShortcut}>⌘T</span>
-                        for a new terminal
-                      </div>
-                    </div>
+                  {activeLayout ? (
+                    /**
+                     * Split Layout Mode:
+                     * When projectLayouts exists for this project, use the recursive
+                     * SplitPanel to render the pane tree. This enables split views.
+                     */
+                    <SplitPanel pane={activeLayout.rootPane} projectId={activeProjectId!} isRoot={true} />
                   ) : (
-                    <>
-                      {activeTab?.type === 'file' && (
-                        <FileEditor
-                          key={activeTab.id}
-                          tabId={activeTab.id}
-                          filePath={activeTab.filePath}
-                          active={true}
-                        />
-                      )}
-
-                      {activeTab?.type === 'diff' && project && (
-                        <DiffViewer
-                          key={activeTab.id}
-                          repoPath={project.repoPath}
-                          active={true}
-                        />
-                      )}
-                    </>
+                    /**
+                     * Legacy/Initial Mode:
+                     * Before split is used, render the single active tab or welcome screen.
+                     * This maintains backward compatibility.
+                     */
+                    <WelcomeOrActiveTab activeTab={activeTab} project={project} />
                   )}
                 </div>
               </div>
@@ -174,4 +162,54 @@ export function App() {
       <ToastContainer />
     </div>
   )
+}
+
+/**
+ * WelcomeOrActiveTab — Helper component for legacy mode rendering
+ * 
+ * Renders either the welcome screen or the currently active tab's content.
+ * Used when projectLayouts doesn't exist yet (before user activates split mode).
+ * 
+ * @param activeTab - The currently active tab object, or undefined
+ * @param project - The currently active project, or undefined
+ */
+function WelcomeOrActiveTab({ activeTab, project }: { activeTab: Tab | undefined; project: Project | undefined }) {
+  if (!activeTab) {
+    return (
+      <div className={styles.welcome}>
+        <div className={styles.welcomeLogo}>MakuLabs Manager</div>
+        <div className={styles.welcomeHint}>
+          Add a project to get started, or press
+          <span className={styles.welcomeShortcut}>⌘T</span>
+          for a new terminal
+        </div>
+      </div>
+    )
+  }
+
+  // Render based on tab type
+  switch (activeTab.type) {
+    case 'terminal':
+      return <TerminalPanel ptyId={activeTab.ptyId} active={true} />
+    
+    case 'file':
+      return (
+        <FileEditor
+          tabId={activeTab.id}
+          filePath={activeTab.filePath}
+          active={true}
+        />
+      )
+    
+    case 'diff':
+      if (!project) return null
+      return <DiffViewer repoPath={project.repoPath} active={true} />
+    
+    default:
+      return (
+        <div className={styles.welcome}>
+          <span>Unknown tab type</span>
+        </div>
+      )
+  }
 }

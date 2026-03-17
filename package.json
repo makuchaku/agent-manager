@@ -2,13 +2,13 @@
   "name": "makulabs-manager-root",
   "private": true,
   "scripts": {
-    "postinstall": "bun install --cwd desktop",
-    "setup": "bun install --cwd desktop && bun run --cwd desktop rebuild",
-    "dev": "bun run --cwd desktop dev",
-    "build": "bun run --cwd desktop build",
-    "test": "bun run --cwd desktop test",
-    "rebuild": "bun run --cwd desktop rebuild",
-    "dist": "bun run --cwd desktop dist",
-    "landing": "bunx serve landing-page"
+    "postinstall": "cd desktop && npm install",
+    "setup": "cd desktop && npm install && npm run rebuild",
+    "dev": "cd desktop && npm run dev",
+    "build": "cd desktop && npm run build",
+    "test": "cd desktop && npm run test",
+    "rebuild": "cd desktop && npm run rebuild",
+    "dist": "cd desktop && npm run dist",
+    "landing": "npx serve landing-page"
   }
 }

@@ -19,11 +19,21 @@ export function TabBar() {
   const allTabs = useAppStore((s) => s.tabs)
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   const createTerminalForActiveProject = useAppStore((s) => s.createTerminalForActiveProject)
+  const splitCurrentTab = useAppStore((s) => s.splitCurrentTab)
   const lastSavedTabId = useAppStore((s) => s.lastSavedTabId)
   const settings = useAppStore((s) => s.settings)
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
   const tabs = allTabs.filter((t) => t.projectId === activeProjectId)
+
+  /**
+   * Handle splitting the current tab vertically (side-by-side)
+   * Creates a new pane to the right of the current pane
+   */
+  const handleSplitVertical = useCallback(() => {
+    if (!activeTabId) return
+    splitCurrentTab('vertical')
+  }, [activeTabId, splitCurrentTab])
 
   const handleClose = useCallback(
     (e: React.MouseEvent, tabId: string) => {
@@ -135,6 +145,19 @@ export function TabBar() {
           +
         </button>
       </Tooltip>
+
+      {/* Split buttons — right-aligned, allow splitting current tab */}
+      <div className={styles.splitButtons}>
+        <Tooltip label="Split right">
+          <button 
+            className={styles.splitButton} 
+            onClick={handleSplitVertical}
+            disabled={!activeTabId}
+          >
+            ◫
+          </button>
+        </Tooltip>
+      </div>
 
       <div className={styles.dragSpacer} />
     </div>

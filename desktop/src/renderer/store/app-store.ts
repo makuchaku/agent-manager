@@ -1,9 +1,89 @@
 import { create } from 'zustand'
-import type { AppState, PersistedState, Tab } from './types'
+import type { AppState, PersistedState, Tab, ProjectLayout, SplitDirection, Pane } from './types'
 import { DEFAULT_SETTINGS } from './types'
 import { titleFromTerminalCommand } from './terminal-tab-title'
+import { 
+  createTabGroup, 
+  findTabGroupContainingTab
+} from './layout-ops'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
+
+/**
+ * Helper: Add a tab to a specific TabGroup in the pane tree
+ */
+export function addTabToPane(root: Pane, paneId: string, tab: Tab): Pane {
+  if (root.type === 'tabGroup' && root.id === paneId) {
+    return {
+      ...root,
+      tabs: [...root.tabs, tab],
+      activeTabId: tab.id
+    }
+  }
+  if (root.type === 'split') {
+    const newChild0 = addTabToPane(root.children[0], paneId, tab)
+    const newChild1 = addTabToPane(root.children[1], paneId, tab)
+    
+    // If one child is now empty after our operation, collapse to the other
+    if (newChild0.type === 'tabGroup' && newChild0.tabs.length === 0) {
+      return newChild1
+    }
+    if (newChild1.type === 'tabGroup' && newChild1.tabs.length === 0) {
+      return newChild0
+    }
+    
+    return {
+      ...root,
+      children: [newChild0, newChild1] as [Pane, Pane]
+    }
+  }
+  return root
+}
+
+/**
+ * Helper: Remove a tab from the pane tree
+ * Returns null if the resulting TabGroup is empty (so it can be collapsed)
+ */
+function removeTabFromPane(root: Pane, tabId: string): Pane | null {
+  if (root.type === 'tabGroup') {
+    const newTabs = root.tabs.filter((t) => t.id !== tabId)
+    
+    // If this TabGroup becomes empty, return null to signal removal
+    if (newTabs.length === 0) {
+      return null
+    }
+    
+    const newActiveTabId = root.activeTabId === tabId 
+      ? (newTabs[0]?.id ?? null)
+      : root.activeTabId
+    return {
+      ...root,
+      tabs: newTabs,
+      activeTabId: newActiveTabId
+    }
+  }
+  if (root.type === 'split') {
+    const newChild0 = removeTabFromPane(root.children[0], tabId)
+    const newChild1 = removeTabFromPane(root.children[1], tabId)
+    
+    // If one child is null (empty), collapse to the other
+    if (newChild0 === null && newChild1 === null) {
+      return null // Both empty, this split should also be removed
+    }
+    if (newChild0 === null) {
+      return newChild1
+    }
+    if (newChild1 === null) {
+      return newChild0
+    }
+    
+    return {
+      ...root,
+      children: [newChild0, newChild1] as [Pane, Pane]
+    }
+  }
+  return root
+}
 
 function executeTerminalStartupCommand(ptyId: string, command: string) {
   if (!command.trim()) return
@@ -34,6 +114,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeAgentProjectIds: new Set<string>(),
   prStatusMap: new Map(),
   ghAvailability: new Map(),
+  
+  /**
+   * Project layouts — per-project pane tree structure for split views
+   * Each project has a recursive tree of TabGroups and Splits
+   */
+  projectLayouts: {},
+  
+  /**
+   * ID of the currently focused pane (TabGroup)
+   * Used to know which pane to split when user clicks split button
+   */
+  activePaneId: null,
 
   addProject: async (project) => {
     set((s) => ({
@@ -114,20 +206,70 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   addTab: (tab) =>
-    set((s) => ({
-      tabs: [...s.tabs, tab],
-      activeTabId: tab.id,
-    })),
+    set((s) => {
+      const newState: Partial<AppState> = {
+        tabs: [...s.tabs, tab],
+        activeTabId: tab.id,
+      }
+      
+      // If we have a layout for this project, add the tab to the active pane
+      if (s.activeProjectId && s.projectLayouts[s.activeProjectId]) {
+        const layout = s.projectLayouts[s.activeProjectId]
+        const targetPaneId = s.activePaneId || layout.activePaneId
+        
+        if (targetPaneId) {
+          // Add tab to the specific pane in the layout tree
+          newState.projectLayouts = {
+            ...s.projectLayouts,
+            [s.activeProjectId]: {
+              ...layout,
+              rootPane: addTabToPane(layout.rootPane, targetPaneId, tab)
+            }
+          }
+        }
+      }
+      
+      return newState
+    }),
 
   removeTab: (id) =>
     set((s) => {
       const newTabs = s.tabs.filter((t) => t.id !== id)
       const wasActive = s.activeTabId === id
       const projectTabs = newTabs.filter((t) => t.projectId === s.activeProjectId)
-      return {
+      
+      const newState: Partial<AppState> = {
         tabs: newTabs,
         activeTabId: wasActive ? (projectTabs[projectTabs.length - 1]?.id ?? null) : s.activeTabId,
       }
+      
+      // If we have a layout for this project, remove the tab from the layout tree
+      if (s.activeProjectId && s.projectLayouts[s.activeProjectId]) {
+        const layout = s.projectLayouts[s.activeProjectId]
+        const newRootPane = removeTabFromPane(layout.rootPane, id)
+        
+        // If the entire layout became empty, create a default empty TabGroup
+        if (newRootPane === null) {
+          newState.projectLayouts = {
+            ...s.projectLayouts,
+            [s.activeProjectId]: {
+              rootPane: createTabGroup(),
+              activePaneId: null
+            }
+          }
+          newState.activePaneId = null
+        } else {
+          newState.projectLayouts = {
+            ...s.projectLayouts,
+            [s.activeProjectId]: {
+              ...layout,
+              rootPane: newRootPane
+            }
+          }
+        }
+      }
+      
+      return newState
     }),
 
   setActiveTab: (id) => set({ activeTabId: id }),
@@ -484,6 +626,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     const activeTabId = savedActiveTabId && validTabs.some((t) => t.id === savedActiveTabId)
       ? savedActiveTabId
       : (validTabs.find((t) => t.projectId === activeProjectId)?.id ?? null)
+    
+    /**
+     * Layout Migration:
+     * If projectLayouts doesn't exist in persisted data (older version or first run),
+     * migrate from flat tabs to tree structure by creating a single TabGroup per project
+     * containing all that project's tabs.
+     */
+    let projectLayouts = data.projectLayouts ?? {}
+    if (Object.keys(projectLayouts).length === 0 && validTabs.length > 0) {
+      console.log('[hydrateState] Migrating from flat tabs to project layouts...')
+      for (const project of projects) {
+        const projectTabs = validTabs.filter((t) => t.projectId === project.id)
+        if (projectTabs.length > 0) {
+          const activeTab = projectTabs.find((t) => t.id === activeTabId) || projectTabs[0]
+          projectLayouts[project.id] = {
+            rootPane: createTabGroup(projectTabs, activeTab.id),
+            activePaneId: null
+          }
+        }
+      }
+      console.log('[hydrateState] Layout migration complete:', Object.keys(projectLayouts).length, 'projects')
+    }
+    
     set({
       projects,
       tabs: validTabs,
@@ -495,6 +660,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       rightPanelMode: data.rightPanelMode ?? {},
       rightPanelOpen: data.rightPanelOpen ?? {},
       rightPanelSize: data.rightPanelSize ?? {},
+      projectLayouts,
+      activePaneId: null,
     })
     console.log('[hydrateState] State set complete')
   },
@@ -507,6 +674,166 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeProject: () => {
     const s = get()
     return s.projects.find((p) => p.id === s.activeProjectId)
+  },
+
+  /**
+   * Splits the current active tab's pane into two panes
+   * The active tab stays in the original pane, and a new pane is created with a new tab
+   * @param direction 'vertical' for side-by-side, 'horizontal' for top-bottom
+   * @param tabId Optional tab ID (defaults to activeTabId from store)
+   */
+  splitCurrentTab: (direction: SplitDirection, tabId?: string) => {
+    const s = get()
+    const targetTabId = tabId || s.activeTabId
+    
+    if (!targetTabId || !s.activeProjectId) {
+      console.log('[splitCurrentTab] No target tab or project')
+      return
+    }
+    
+    const layout = s.projectLayouts[s.activeProjectId]
+    if (!layout) {
+      console.log('[splitCurrentTab] No layout for project', s.activeProjectId)
+      return
+    }
+    
+    // Find the TabGroup containing the target tab
+    const tabGroup = findTabGroupContainingTab(layout.rootPane, targetTabId)
+    if (!tabGroup) {
+      console.log('[splitCurrentTab] TabGroup not found for tab', targetTabId)
+      return
+    }
+    
+    // Create a new empty TabGroup for the split
+    const newTabGroup = createTabGroup()
+    
+    // Create a Split with original group and new empty group
+    const split: Pane = {
+      id: `split-${crypto.randomUUID()}`,
+      type: 'split',
+      direction,
+      children: [tabGroup, newTabGroup] as [Pane, Pane],
+      splitRatio: 0.5
+    }
+    
+    // Helper: Replace the TabGroup with the Split in the tree
+    function replacePaneInTree(root: Pane, targetId: string, replacement: Pane): Pane {
+      if (root.id === targetId) {
+        return replacement
+      }
+      if (root.type === 'split') {
+        const newRoot: Pane = { 
+          ...root, 
+          children: [
+            replacePaneInTree(root.children[0], targetId, replacement),
+            replacePaneInTree(root.children[1], targetId, replacement)
+          ] as [Pane, Pane]
+        }
+        return newRoot
+      }
+      return root
+    }
+    
+    // Replace the old TabGroup with the new Split
+    const newRootPane = replacePaneInTree(layout.rootPane, tabGroup.id, split)
+    
+    // Create a new terminal for the new pane
+    const project = s.projects.find(p => p.id === s.activeProjectId)
+    if (project) {
+      // Create the terminal asynchronously
+      const shell = s.settings.defaultShell || undefined
+      window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: project.id })
+        .then(ptyId => {
+          const newTab: Tab = {
+            id: crypto.randomUUID(),
+            projectId: s.activeProjectId!,
+            type: 'terminal',
+            title: 'Terminal',
+            ptyId
+          }
+          
+          // Add the new tab to both the flat array and the layout
+          set((state) => {
+            const updatedLayout = state.projectLayouts[s.activeProjectId!]
+            const newLayoutRoot = addTabToPane(updatedLayout.rootPane, newTabGroup.id, newTab)
+            
+            return {
+              tabs: [...state.tabs, newTab],
+              projectLayouts: {
+                ...state.projectLayouts,
+                [s.activeProjectId!]: {
+                  ...updatedLayout,
+                  rootPane: newLayoutRoot,
+                  activePaneId: newTabGroup.id
+                }
+              },
+              activePaneId: newTabGroup.id,
+              activeTabId: newTab.id
+            }
+          })
+          
+          // Execute startup command if configured
+          const startupCmd = s.settings.terminalStartupCommand
+          if (startupCmd) {
+            setTimeout(() => {
+              window.api.pty.write(ptyId, startupCmd + '\r\n')
+            }, 500)
+          }
+        })
+        .catch(err => {
+          console.error('[splitCurrentTab] Failed to create terminal:', err)
+        })
+    }
+    
+    // Update the layout immediately with the split structure
+    set((state) => ({
+      projectLayouts: {
+        ...state.projectLayouts,
+        [s.activeProjectId!]: {
+          rootPane: newRootPane,
+          activePaneId: newTabGroup.id
+        }
+      },
+      activePaneId: newTabGroup.id
+    }))
+    
+    console.log(`[splitCurrentTab] Success! Created split with direction ${direction}. New pane: ${newTabGroup.id}`)
+  },
+
+  /**
+   * Sets the currently active pane ID
+   * Called when user clicks into a TabGroup to track focus
+   */
+  setActivePaneId: (paneId: string | null) => {
+    set({ activePaneId: paneId })
+  },
+
+  /**
+   * Updates the layout for a specific project
+   * Used by SplitPanel components when layout changes (e.g., resizing)
+   */
+  updateProjectLayout: (projectId: string, layout: ProjectLayout) => {
+    set((state) => ({
+      projectLayouts: {
+        ...state.projectLayouts,
+        [projectId]: layout
+      }
+    }))
+  },
+
+  /**
+   * Finds the TabGroup pane ID that contains a specific tab
+   * Used to determine which pane is active based on active tab
+   */
+  getTabPaneId: (tabId: string) => {
+    const s = get()
+    if (!s.activeProjectId) return null
+    
+    const layout = s.projectLayouts[s.activeProjectId]
+    if (!layout) return null
+    
+    const tabGroup = findTabGroupContainingTab(layout.rootPane, tabId)
+    return tabGroup?.id || null
   },
 }))
 
@@ -524,6 +851,7 @@ function getPersistedSlice(state: AppState): PersistedState {
     rightPanelMode: state.rightPanelMode,
     rightPanelOpen: state.rightPanelOpen,
     rightPanelSize: state.rightPanelSize,
+    projectLayouts: state.projectLayouts,
   }
 }
 
@@ -546,7 +874,8 @@ useAppStore.subscribe((state, prevState) => {
     state.settings !== prevState.settings ||
     state.rightPanelMode !== prevState.rightPanelMode ||
     state.rightPanelOpen !== prevState.rightPanelOpen ||
-    state.rightPanelSize !== prevState.rightPanelSize
+    state.rightPanelSize !== prevState.rightPanelSize ||
+    state.projectLayouts !== prevState.projectLayouts
   ) {
     debouncedSave(state)
   }

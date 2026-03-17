@@ -50,3 +50,19 @@
 .splitContainer :global(.sash.horizontal.active) {
   height: 2px;
 }
+
+/* Error state for invalid pane configurations */
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  background: var(--bg-secondary);
+  color: var(--text-error);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: center;
+  border: 1px dashed var(--border-error);
+}
