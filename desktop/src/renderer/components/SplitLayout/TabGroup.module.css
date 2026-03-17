@@ -53,6 +53,7 @@
   padding: 0 var(--space-3);
   background: var(--surface-0);
   flex-shrink: 0;
+  margin-left: auto;
   position: relative;
   z-index: 100;
 }

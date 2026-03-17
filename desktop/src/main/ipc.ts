@@ -55,6 +55,27 @@ function isTabLike(value: unknown): value is TabLike {
   return isRecord(value) && typeof value.id === 'string' && (typeof value.projectId === 'string' || typeof value.workspaceId === 'string')
 }
 
+/**
+ * Load JSON file with fallback value
+ */
+async function loadJsonFile<T>(filePath: string, fallback: T): Promise<T> {
+  try {
+    const { readFile } = await import('fs/promises')
+    const content = await readFile(filePath, 'utf-8')
+    return JSON.parse(content) as T
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Save JSON file
+ */
+async function saveJsonFile(filePath: string, data: unknown): Promise<void> {
+  const { writeFile } = await import('fs/promises')
+  await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+}
+
 function sanitizeLoadedState(data: unknown): StateSanitizeResult {
   if (!isRecord(data)) return { data, changed: false }
 
