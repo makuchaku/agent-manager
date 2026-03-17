@@ -319,6 +319,11 @@ export function registerIpcHandlers(): void {
     return FileService.readFile(filePath)
   })
 
+  ipcMain.handle(IPC.FS_READ_FILE_BINARY, async (_e, filePath: string) => {
+    const buffer = await FileService.readFileBinary(filePath)
+    return buffer.toString('base64')
+  })
+
   ipcMain.handle(IPC.FS_WRITE_FILE, async (_e, filePath: string, content: string) => {
     return FileService.writeFile(filePath, content)
   })

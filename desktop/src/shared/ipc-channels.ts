@@ -28,6 +28,7 @@ export const IPC = {
   FS_GET_TREE: 'fs:get-tree',
   FS_GET_TREE_WITH_STATUS: 'fs:get-tree-with-status',
   FS_READ_FILE: 'fs:read-file',
+  FS_READ_FILE_BINARY: 'fs:read-file-binary',
   FS_WRITE_FILE: 'fs:write-file',
   FS_WATCH_START: 'fs:watch-start',
   FS_WATCH_STOP: 'fs:watch-stop',

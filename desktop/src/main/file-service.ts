@@ -156,6 +156,10 @@ export class FileService {
     return fsReadFile(filePath, 'utf-8')
   }
 
+  static async readFileBinary(filePath: string): Promise<Buffer> {
+    return fsReadFile(filePath)
+  }
+
   static async writeFile(filePath: string, content: string): Promise<void> {
     await fsWriteFile(filePath, content, 'utf-8')
   }

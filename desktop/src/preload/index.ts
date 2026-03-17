@@ -68,6 +68,8 @@ const api = {
       ipcRenderer.invoke(IPC.FS_GET_TREE_WITH_STATUS, dirPath),
     readFile: (filePath: string) =>
       ipcRenderer.invoke(IPC.FS_READ_FILE, filePath),
+    readFileBinary: (filePath: string) =>
+      ipcRenderer.invoke(IPC.FS_READ_FILE_BINARY, filePath) as Promise<string>,
     writeFile: (filePath: string, content: string) =>
       ipcRenderer.invoke(IPC.FS_WRITE_FILE, filePath, content),
     watchDir: (dirPath: string) =>

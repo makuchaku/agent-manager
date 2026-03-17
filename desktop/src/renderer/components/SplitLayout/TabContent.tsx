@@ -1,10 +1,19 @@
-import { useCallback } from 'react'
-import { useAppStore } from '../../store/app-store'
 import type { Tab } from '../../store/types'
 import { TerminalPanel } from '../Terminal/TerminalPanel'
 import { FileEditor } from '../Editor/FileEditor'
 import { DiffViewer } from '../Editor/DiffEditor'
+import { ImageViewer } from '../Editor/ImageViewer'
 import styles from './TabContent.module.css'
+
+// Image file extensions
+const IMAGE_EXTENSIONS = new Set([
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'icns', 'tiff', 'tif', 'svg'
+])
+
+function isImageFile(filePath: string): boolean {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  return ext !== undefined && IMAGE_EXTENSIONS.has(ext)
+}
 
 interface TabContentProps {
   tab: Tab
@@ -28,19 +37,6 @@ interface TabContentProps {
  * <TabContent tab={terminalTab} projectId="proj-123" />
  */
 export function TabContent({ tab, projectId }: TabContentProps) {
-  // Track unsaved state for file tabs
-  const setTabUnsaved = useAppStore((s) => s.setTabUnsaved)
-  const notifyTabSaved = useAppStore((s) => s.notifyTabSaved)
-
-  const handleFileChange = useCallback((unsaved: boolean) => {
-    if (tab.type === 'file') {
-      setTabUnsaved(tab.id, unsaved)
-    }
-  }, [tab, setTabUnsaved])
-
-  const handleFileSave = useCallback(() => {
-    notifyTabSaved(tab.id)
-  }, [tab, notifyTabSaved])
 
   // Render based on tab type
   switch (tab.type) {
@@ -52,14 +48,20 @@ export function TabContent({ tab, projectId }: TabContentProps) {
       )
 
     case 'file':
+      // Check if this is an image file and render with ImageViewer
+      if (isImageFile(tab.filePath)) {
+        return (
+          <div className={styles.content}>
+            <ImageViewer filePath={tab.filePath} />
+          </div>
+        )
+      }
       return (
         <div className={styles.content}>
           <FileEditor
             tabId={tab.id}
             filePath={tab.filePath}
             active={true}
-            onChange={handleFileChange}
-            onSave={handleFileSave}
           />
         </div>
       )
