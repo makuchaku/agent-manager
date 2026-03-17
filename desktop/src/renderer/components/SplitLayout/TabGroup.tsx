@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useAppStore } from '../../store/app-store'
 import type { Tab, SplitDirection } from '../../store/types'
 import { TabContent } from './TabContent'
+import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './TabGroup.module.css'
 
 interface TabGroupProps {
@@ -151,7 +152,7 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
             const title = tab.type === 'terminal' 
               ? tab.title 
               : tab.type === 'file' 
-                ? tab.filePath.split('/').pop() || tab.filePath
+                ? tab.filePath.split(/[/\\]/).pop() || tab.filePath
                 : 'Changes'
             
             return (
@@ -163,7 +164,9 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
                 {tab.type === 'file' && tab.unsaved && (
                   <span className={styles.unsavedDot} />
                 )}
-                <span className={styles.tabTitle}>{title}</span>
+                <Tooltip label={tab.type === 'file' ? tab.filePath : title}>
+                  <span className={styles.tabTitle}>{title}</span>
+                </Tooltip>
                 <button
                   className={styles.closeButton}
                   onClick={(e) => {

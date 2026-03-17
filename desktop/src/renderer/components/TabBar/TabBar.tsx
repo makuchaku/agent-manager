@@ -7,7 +7,9 @@ import styles from './TabBar.module.css'
 function getTabTitle(tab: Tab): string {
   if (tab.type === 'terminal') return tab.title
   if (tab.type === 'diff') return 'Changes'
-  const name = tab.filePath.split('/').pop() || tab.filePath
+  // Handle both Unix (/) and Windows (\) path separators
+  const parts = tab.filePath.split(/[/\\]/)
+  const name = parts.pop() || tab.filePath
   return name
 }
 
@@ -115,9 +117,11 @@ export function TabBar() {
               onDragEnd={clearDragState}
             >
               {/* Tab title — takes available space, ellipses if necessary */}
-              <span className={`${styles.tabTitle} ${isSaved ? styles.savedFlash : ''}`}>
-                {getTabTitle(tab)}
-              </span>
+              <Tooltip label={tab.type === 'file' ? tab.filePath : getTabTitle(tab)}>
+                <span className={`${styles.tabTitle} ${isSaved ? styles.savedFlash : ''}`}>
+                  {getTabTitle(tab)}
+                </span>
+              </Tooltip>
               
               {/* Keyboard shortcut hint (1-9 mapped to Cmd+1..Cmd+9) */}
               {shortcutHint && <span className={styles.shortcutHint}>{shortcutHint}</span>}
