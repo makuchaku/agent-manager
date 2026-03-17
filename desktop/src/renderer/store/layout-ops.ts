@@ -304,11 +304,44 @@ export function moveTabBetweenGroups(
 }
 
 /**
- * Create default layout for a project
+ * Set the active tab in a specific TabGroup within the pane tree
+ * 
+ * This function traverses the recursive pane tree and updates the activeTabId
+ * of the specified TabGroup. It returns a new root pane with the update applied,
+ * maintaining immutability (does not mutate the original tree).
+ * 
+ * Used by the store's setActiveTab to ensure tab selection works correctly
+ * in split layout mode, where each TabGroup maintains its own activeTabId.
+ * 
+ * @param root - The root pane of the tree
+ * @param tabGroupId - The ID of the TabGroup to update
+ * @param tabId - The ID of the tab to set as active (or null to clear)
+ * @returns A new root pane with the updated activeTabId
  */
-export function createDefaultLayout(projectId: string, tabs: Tab[] = []): ProjectLayout {
-  return {
-    rootPane: createTabGroup(tabs, tabs.length > 0 ? tabs[0].id : null),
-    activePaneId: null
+export function setActiveTabInTree(root: Pane, tabGroupId: string, tabId: string | null): Pane {
+  // If this is the target TabGroup, update its activeTabId
+  if (root.type === 'tabGroup' && root.id === tabGroupId) {
+    return {
+      ...root,
+      activeTabId: tabId
+    }
   }
+
+  // If this is a split, recursively search children
+  if (root.type === 'split') {
+    const newChildren: [Pane, Pane] = [
+      setActiveTabInTree(root.children[0], tabGroupId, tabId),
+      setActiveTabInTree(root.children[1], tabGroupId, tabId)
+    ]
+
+    // Only create new object if a child was actually updated
+    if (newChildren[0] !== root.children[0] || newChildren[1] !== root.children[1]) {
+      return {
+        ...root,
+        children: newChildren
+      }
+    }
+  }
+
+  return root
 }

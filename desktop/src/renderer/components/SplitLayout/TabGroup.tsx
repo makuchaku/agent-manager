@@ -40,7 +40,17 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
 
   /**
    * Handle clicking a tab to activate it
-   * Also sets this pane as the active pane for split operations
+   * 
+   * IMPORTANT: This updates BOTH:
+   * 1. The global activeTabId (via setActiveTab) - used for global tab switching shortcuts
+   * 2. The specific TabGroup's activeTabId in the projectLayouts tree (via store logic)
+   * 
+   * The store's setActiveTab function handles updating the layout tree structure,
+   * which is necessary because each TabGroup in a split layout maintains its own
+   * activeTabId. Without this, the tab would appear unselected in the UI even
+   * though the global state is updated.
+   * 
+   * Also sets this pane as the active pane so split operations know which pane to target.
    */
   const handleTabClick = useCallback((tabId: string) => {
     setActiveTab(tabId)

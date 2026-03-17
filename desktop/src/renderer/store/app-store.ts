@@ -4,7 +4,8 @@ import { DEFAULT_SETTINGS } from './types'
 import { titleFromTerminalCommand } from './terminal-tab-title'
 import { 
   createTabGroup, 
-  findTabGroupContainingTab
+  findTabGroupContainingTab,
+  setActiveTabInTree
 } from './layout-ops'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
@@ -272,7 +273,43 @@ export const useAppStore = create<AppState>((set, get) => ({
       return newState
     }),
 
-  setActiveTab: (id) => set({ activeTabId: id }),
+  /**
+   * Set the active tab globally and in the layout tree (if in split layout mode)
+   * This ensures the tab appears selected in both the global state and the specific TabGroup
+   */
+  setActiveTab: (tabId: string | null) => {
+    set((state) => {
+      // If no active project or no layout, just update the global activeTabId
+      if (!state.activeProjectId || !state.projectLayouts[state.activeProjectId]) {
+        return { activeTabId: tabId }
+      }
+
+      // Find which TabGroup contains this tab
+      const layout = state.projectLayouts[state.activeProjectId]
+      if (!layout) return { activeTabId: tabId }
+
+      const tabGroup = tabId ? findTabGroupContainingTab(layout.rootPane, tabId) : null
+      if (!tabGroup) {
+        // Tab not found in any TabGroup, just update global state
+        return { activeTabId: tabId }
+      }
+
+      // Update the activeTabId in the specific TabGroup within the tree
+      const newRootPane = setActiveTabInTree(layout.rootPane, tabGroup.id, tabId)
+
+      return {
+        activeTabId: tabId,
+        activePaneId: tabGroup.id,
+        projectLayouts: {
+          ...state.projectLayouts,
+          [state.activeProjectId]: {
+            ...layout,
+            rootPane: newRootPane
+          }
+        }
+      }
+    })
+  },
 
   moveTabInActiveProject: (sourceTabId, targetTabId) =>
     set((s) => {
