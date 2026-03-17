@@ -835,10 +835,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       return
     }
     
-    const layout = s.projectLayouts[s.activeProjectId]
+    let layout = s.projectLayouts[s.activeProjectId]
+    
+    // BUG FIX: Initialize layout if it doesn't exist (e.g., when using global TabBar)
+    // This allows split to work even in legacy/non-split mode
     if (!layout) {
-      console.log('[splitCurrentTab] No layout for project', s.activeProjectId)
-      return
+      console.log('[splitCurrentTab] No layout for project, initializing from tabs...')
+      const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
+      if (projectTabs.length === 0) {
+        console.log('[splitCurrentTab] No tabs to create layout from')
+        return
+      }
+      const activeTab = projectTabs.find((t) => t.id === targetTabId) || projectTabs[0]
+      layout = {
+        rootPane: createTabGroup(projectTabs, activeTab.id),
+        activePaneId: null
+      }
+      console.log('[splitCurrentTab] Layout initialized with', projectTabs.length, 'tabs')
     }
     
     // Find the TabGroup containing the target tab
