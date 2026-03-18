@@ -1,6 +1,6 @@
 # Mickey
 
-A Windows desktop app for running multiple AI agents in parallel. Each agent gets its own terminal, editor, and git branch, all in one window. This IDE is designed for developers who use Git branches (not worktrees).
+A Windows & MacOS desktop app for running multiple AI agents in parallel. Each agent gets its own terminal, editor, and git branch, all in one window. This IDE is designed for developers who use Git branches (not worktrees).
 
 <img width="3506" height="2200" alt="image" src="https://github.com/user-attachments/assets/9f055656-c213-4d56-8af4-251bd739ad8b" />
 
@@ -17,7 +17,7 @@ A Windows desktop app for running multiple AI agents in parallel. Each agent get
 
 ## Getting started
 
-Requires Windows and [Bun](https://bun.sh).
+Requires [Bun](https://bun.sh).
 
 ```bash
 bun run setup
