@@ -1,6 +1,7 @@
 import * as pty from 'node-pty'
 import { WebContents } from 'electron'
 import { IPC } from '../shared/ipc-channels'
+import { existsSync } from 'fs'
 
 interface PtyInstance {
   process: pty.IPty
@@ -12,6 +13,59 @@ interface PtyInstance {
   replayChunks: string[]
   replayChars: number
   projectId?: string
+}
+
+function findValidShell(preferredShell?: string): string {
+  // If a specific shell is requested, try it first
+  if (preferredShell && preferredShell.trim()) {
+    const trimmed = preferredShell.trim()
+    if (existsSync(trimmed)) {
+      return trimmed
+    }
+    console.warn(`[pty] Requested shell not found: ${trimmed}, trying fallbacks`)
+  }
+  
+  // Try environment SHELL
+  const envShell = process.env.SHELL
+  if (envShell && existsSync(envShell)) {
+    return envShell
+  }
+  
+  // Platform-specific fallbacks
+  const isWindows = process.platform === 'win32'
+  if (isWindows) {
+    const windowsShells = [
+      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      'C:\\Windows\\System32\\cmd.exe',
+      'powershell.exe',
+      'cmd.exe'
+    ]
+    for (const shell of windowsShells) {
+      if (existsSync(shell)) {
+        return shell
+      }
+    }
+    // Try without full path as last resort
+    return 'powershell.exe'
+  }
+  
+  // macOS/Linux fallbacks - prioritize zsh on macOS, bash on Linux
+  const isMac = process.platform === 'darwin'
+  const fallbackShells = isMac
+    ? ['/bin/zsh', '/bin/bash', '/bin/sh']
+    : ['/bin/bash', '/bin/sh', '/bin/zsh']
+  
+  for (const shell of fallbackShells) {
+    if (existsSync(shell)) {
+      console.info(`[pty] Using fallback shell: ${shell}`)
+      return shell
+    }
+  }
+  
+  // Last resort
+  throw new Error('No valid shell found. Tried: ' + 
+    (preferredShell ? [preferredShell, envShell, ...fallbackShells].join(', ') : 
+      [envShell, ...fallbackShells].join(', ')))
 }
 
 const PTY_REPLAY_BUFFER_MAX_CHARS = 8_000_000
@@ -55,30 +109,94 @@ export class PtyManager {
     if (command && command.length > 0) {
       file = command[0]
       args = command.slice(1)
-} else {
-  const isWindows = process.platform === 'win32'
-  if (isWindows) {
-    // Use WSL Ubuntu on Windows instead of PowerShell
-    file = (shell && shell.trim()) || 'wsl.exe'
-    args = (shell && shell.trim()) ? [] : ['-d', 'Ubuntu']
-  } else {
-    file = (shell && shell.trim()) || (process.env.SHELL || '/bin/zsh')
-    args = []
-  }
-}
+    } else {
+      const isWindows = process.platform === 'win32'
+      if (isWindows) {
+        // Check if WSL is explicitly requested or available
+        const preferredShell = shell?.trim()
+        if (preferredShell && preferredShell.toLowerCase().includes('wsl')) {
+          file = 'wsl.exe'
+          args = ['-d', 'Ubuntu']
+        } else {
+          // Use PowerShell or cmd on Windows
+          file = findValidShell(preferredShell)
+          args = []
+        }
+      } else {
+        // macOS and Linux - find a valid shell
+        file = findValidShell(shell)
+        args = []
+      }
+    }
+    
+    // Validate the file exists before spawning
+    if (!existsSync(file)) {
+      throw new Error(`Shell not found at path: ${file}`)
+    }
+    
+    // Validate working directory exists
+    let finalCwd = workingDir
+    if (workingDir && !existsSync(workingDir)) {
+      console.warn(`[pty] Working directory does not exist: ${workingDir}, using process.cwd()`)
+      finalCwd = process.cwd()
+    }
+    if (!finalCwd) {
+      finalCwd = process.cwd()
+    }
+    
+    console.info(`[pty] Spawning shell: ${file} (cwd: ${workingDir || 'default'})`)
 
-    const proc = pty.spawn(file, args, {
-      name: 'xterm-256color',
-      cols: 80,
-      rows: 24,
-      cwd: workingDir,
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-        ...extraEnv,
-      } as Record<string, string>,
-    })
+    // Build minimal environment to avoid issues with inherited Electron env vars
+    const minimalEnv: Record<string, string> = {
+      PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+      HOME: process.env.HOME || '',
+      USER: process.env.USER || '',
+      SHELL: file,
+      TERM: 'xterm-color',
+      LANG: process.env.LANG || 'en_US.UTF-8',
+      ...extraEnv,
+    }
+    
+    // Keep some important env vars if they exist
+    if (process.env.LOGNAME) minimalEnv.LOGNAME = process.env.LOGNAME
+    if (process.env.TMPDIR) minimalEnv.TMPDIR = process.env.TMPDIR
+
+    let proc: pty.IPty
+    let attemptedShells = [file]
+    
+    try {
+      proc = pty.spawn(file, args, {
+        name: 'xterm-color',
+        cols: 80,
+        rows: 24,
+        cwd: finalCwd,
+        env: minimalEnv,
+      })
+    } catch (error) {
+      console.error(`[pty] Failed to spawn ${file}, trying fallback...`, error)
+      
+      // Try /bin/sh as ultimate fallback
+      const fallbackShell = '/bin/sh'
+      if (file !== fallbackShell && existsSync(fallbackShell)) {
+        attemptedShells.push(fallbackShell)
+        minimalEnv.SHELL = fallbackShell
+        try {
+          proc = pty.spawn(fallbackShell, [], {
+            name: 'xterm-color',
+            cols: 80,
+            rows: 24,
+            cwd: finalCwd,
+            env: minimalEnv,
+          })
+          console.info(`[pty] Fallback to ${fallbackShell} succeeded`)
+        } catch (fallbackError) {
+          console.error(`[pty] Fallback also failed:`, fallbackError)
+          throw new Error(`Failed to spawn shell. Tried: ${attemptedShells.join(', ')}. Error: ${error instanceof Error ? error.message : String(error)}`)
+        }
+      } else {
+        throw new Error(`Failed to spawn shell ${file}: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
 
     const instance: PtyInstance = {
       process: proc,
