@@ -129,9 +129,12 @@ export class PtyManager {
       }
     }
     
-    // Validate the file exists before spawning
-    if (!existsSync(file)) {
-      throw new Error(`Shell not found at path: ${file}`)
+    // Validate the file exists before spawning (only for absolute paths)
+    // Note: Commands on PATH like 'powershell.exe' don't need full paths
+    if (file.includes('/') || file.includes('\\')) {
+      if (!existsSync(file)) {
+        throw new Error(`Shell not found at path: ${file}`)
+      }
     }
     
     // Validate working directory exists
@@ -152,7 +155,7 @@ export class PtyManager {
       HOME: process.env.HOME || '',
       USER: process.env.USER || '',
       SHELL: file,
-      TERM: 'xterm-color',
+      TERM: 'xterm-256color',
       LANG: process.env.LANG || 'en_US.UTF-8',
       ...extraEnv,
     }
@@ -160,13 +163,29 @@ export class PtyManager {
     // Keep some important env vars if they exist
     if (process.env.LOGNAME) minimalEnv.LOGNAME = process.env.LOGNAME
     if (process.env.TMPDIR) minimalEnv.TMPDIR = process.env.TMPDIR
+    
+    // Windows-specific variables required for PowerShell
+    if (process.platform === 'win32') {
+      if (process.env.SYSTEMROOT) minimalEnv.SYSTEMROOT = process.env.SYSTEMROOT
+      if (process.env.WINDIR) minimalEnv.WINDIR = process.env.WINDIR
+      if (process.env.USERPROFILE) minimalEnv.USERPROFILE = process.env.USERPROFILE
+      if (process.env.APPDATA) minimalEnv.APPDATA = process.env.APPDATA
+      if (process.env.LOCALAPPDATA) minimalEnv.LOCALAPPDATA = process.env.LOCALAPPDATA
+      if (process.env.COMPUTERNAME) minimalEnv.COMPUTERNAME = process.env.COMPUTERNAME
+      if (process.env.USERNAME) minimalEnv.USERNAME = process.env.USERNAME
+      if (process.env.PATHEXT) minimalEnv.PATHEXT = process.env.PATHEXT
+      if (process.env.SESSIONNAME) minimalEnv.SESSIONNAME = process.env.SESSIONNAME
+      if (process.env.DRIVERDATA) minimalEnv.DRIVERDATA = process.env.DRIVERDATA
+      // Copy PowerShell-specific vars
+      if (process.env.PSModulePath) minimalEnv.PSModulePath = process.env.PSModulePath
+    }
 
     let proc: pty.IPty
     let attemptedShells = [file]
     
     try {
       proc = pty.spawn(file, args, {
-        name: 'xterm-color',
+        name: 'xterm-256color',
         cols: 80,
         rows: 24,
         cwd: finalCwd,
@@ -182,7 +201,7 @@ export class PtyManager {
         minimalEnv.SHELL = fallbackShell
         try {
           proc = pty.spawn(fallbackShell, [], {
-            name: 'xterm-color',
+            name: 'xterm-256color',
             cols: 80,
             rows: 24,
             cwd: finalCwd,

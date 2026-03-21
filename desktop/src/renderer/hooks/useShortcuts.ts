@@ -119,12 +119,12 @@ export function useShortcuts() {
       // ── Tab management ──
       if (!shift && !alt && e.key === 't') {
         consume()
-        store.createTerminalForActiveWorkspace()
+        store.createTerminalForActiveProject()
         return
       }
       if (shift && !alt && e.code === 'KeyN') {
         consume()
-        store.createTerminalForActiveWorkspace()
+        store.createTerminalForActiveProject()
         return
       }
       if (!shift && !alt && e.key === 'w') {
