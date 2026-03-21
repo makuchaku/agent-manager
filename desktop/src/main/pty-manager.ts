@@ -34,18 +34,8 @@ function findValidShell(preferredShell?: string): string {
   // Platform-specific fallbacks
   const isWindows = process.platform === 'win32'
   if (isWindows) {
-    const windowsShells = [
-      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-      'C:\\Windows\\System32\\cmd.exe',
-      'powershell.exe',
-      'cmd.exe'
-    ]
-    for (const shell of windowsShells) {
-      if (existsSync(shell)) {
-        return shell
-      }
-    }
-    // Try without full path as last resort
+    // Use bare command first - let Windows resolve via PATH
+    // This ensures we get PowerShell 7+ (pwsh) if installed, or Windows PowerShell
     return 'powershell.exe'
   }
   
