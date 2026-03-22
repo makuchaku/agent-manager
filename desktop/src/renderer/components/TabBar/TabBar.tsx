@@ -22,7 +22,6 @@ export function TabBar() {
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   const projects = useAppStore((s) => s.projects)
   const addTab = useAppStore((s) => s.addTab)
-  const createTerminalForActiveProject = useAppStore((s) => s.createTerminalForActiveProject)
   const splitCurrentTab = useAppStore((s) => s.splitCurrentTab)
   const lastSavedTabId = useAppStore((s) => s.lastSavedTabId)
   const settings = useAppStore((s) => s.settings)
@@ -107,8 +106,6 @@ export function TabBar() {
     
     try {
       const ptyId = await window.api.pty.create(activeProject.repoPath, shell, { AGENT_ORCH_PROJECT_ID: activeProjectId! })
-      const projectTabs = allTabs.filter((t) => t.projectId === activeProjectId)
-      const termCount = projectTabs.filter((t) => t.type === 'terminal').length
       
       const newTab: Tab = {
         id: crypto.randomUUID(),

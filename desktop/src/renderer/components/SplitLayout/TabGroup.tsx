@@ -32,7 +32,6 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
   const removeTab = useAppStore((s) => s.removeTab)
   const splitCurrentTab = useAppStore((s) => s.splitCurrentTab)
   const addTab = useAppStore((s) => s.addTab)
-  const createTerminalForActiveProject = useAppStore((s) => s.createTerminalForActiveProject)
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   
   // Find the active tab object
@@ -61,7 +60,7 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
   /**
    * Handle creating a new tab with specific shell
    */
-  const handleNewTabWithShell = useCallback(async (shellName: 'default' | 'powershell' | 'ubuntu') => {
+  const handleNewTabWithShell = useCallback(async (shellName: 'powershell' | 'ubuntu') => {
     console.log('[TabGroup] New tab button clicked for pane:', paneId, 'with shell:', shellName)
     
     // First, set this pane as the active pane so the tab goes to the right place
@@ -110,8 +109,6 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
     
     try {
       const ptyId = await window.api.pty.create(project.repoPath, shell, { AGENT_ORCH_PROJECT_ID: projectId })
-      const projectTabs = state.tabs.filter((t) => t.projectId === projectId)
-      const termCount = projectTabs.filter((t) => t.type === 'terminal').length
       
       const newTab: Tab = {
         id: crypto.randomUUID(),
