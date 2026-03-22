@@ -79,10 +79,12 @@ export interface Settings {
   diffInline: boolean
   terminalFontSize: number
   editorFontSize: number
+  editorLineHeight: number
   uiFontSize: number
   terminalStartupCommand: string
   theme: Theme
   editorTheme: string
+  wordWrap: 'on' | 'off' | 'wordWrapColumn' | 'bounded'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -93,10 +95,12 @@ export const DEFAULT_SETTINGS: Settings = {
   diffInline: false,
   terminalFontSize: 22,
   editorFontSize: 22,
+  editorLineHeight: 20,
   uiFontSize: 18,
   terminalStartupCommand: 'opencode',
   theme: 'light',
   editorTheme: 'vs',
+  wordWrap: 'on',
 }
 
 export interface Toast {

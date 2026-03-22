@@ -265,7 +265,7 @@ export function FileEditor({ tabId, filePath, active }: Props) {
         options={{
           fontFamily: "'SF Mono', Menlo, 'Cascadia Code', monospace",
           fontSize: settings.editorFontSize,
-          lineHeight: 20,
+          lineHeight: settings.editorLineHeight,
           minimap: { enabled: true },
           scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
           padding: { top: 8, bottom: 8 },
@@ -273,7 +273,7 @@ export function FileEditor({ tabId, filePath, active }: Props) {
           cursorBlinking: 'smooth',
           smoothScrolling: true,
           tabSize: 2,
-          wordWrap: 'off',
+          wordWrap: settings.wordWrap,
           automaticLayout: true,
         }}
       />

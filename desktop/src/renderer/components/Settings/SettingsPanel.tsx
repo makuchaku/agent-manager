@@ -183,6 +183,22 @@ export function SettingsPanel() {
             onChange={(v) => update('editorFontSize', v)}
           />
 
+          <NumberRow
+            label="Editor line height"
+            description="Vertical line spacing in pixels for file and diff editors (default: 20)"
+            value={settings.editorLineHeight}
+            min={10}
+            max={40}
+            onChange={(v) => update('editorLineHeight', v)}
+          />
+
+          <ToggleRow
+            label="Word wrap"
+            description="Wrap long lines to fit within the editor viewport"
+            value={settings.wordWrap === 'on'}
+            onChange={(v) => update('wordWrap', v ? 'on' : 'off')}
+          />
+
           <SelectRow
             label="Editor theme"
             description="Color theme for file and diff editors"
