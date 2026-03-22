@@ -255,8 +255,22 @@ export function TabBar() {
         })}
       </div>
 
-      <Tooltip label="New terminal" shortcut="⌘T">
-        <button className={styles.newTabButton} onClick={createTerminalForActiveProject}>
+      {/* 
+        BUG FIX: Changed + button to open Ubuntu (WSL) by default
+        
+        REASONING:
+        - The + button was calling createTerminalForActiveProject which uses defaultShell setting
+        - This caused the + button to open PowerShell instead of the preferred Ubuntu shell
+        - Users expect the main "New Tab" button (+) to open their preferred working shell (WSL Ubuntu)
+        - The PowerShell icon button (PS) is specifically for PowerShell when explicitly needed
+        
+        IMPLEMENTATION:
+        - + button now calls handleNewTabWithShell('ubuntu') to open WSL Ubuntu
+        - PowerShell icon button calls handleNewTabWithShell('powershell') for PowerShell
+        - This matches user expectations: default action = Ubuntu, PowerShell = explicit choice
+      */}
+      <Tooltip label="New Ubuntu (WSL) terminal" shortcut="⌘T">
+        <button className={styles.newTabButton} onClick={() => handleNewTabWithShell('ubuntu')}>
           +
         </button>
       </Tooltip>

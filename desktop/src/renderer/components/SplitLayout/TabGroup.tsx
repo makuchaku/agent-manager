@@ -76,6 +76,12 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
     }
     
     // Determine shell based on selection
+    // 
+    // IMPLEMENTATION:
+    // - 'powershell' -> pwsh.exe (PowerShell 7+)
+    // - 'ubuntu' -> wsl.exe -d Ubuntu (WSL with Ubuntu distro)
+    // - Note: The 'default' case has been removed as we now always explicitly specify the shell
+    // - The + button always opens Ubuntu, PowerShell icon opens PowerShell
     let shell: string | undefined
     let title: string
     // BUG FIX: Use explicit shell identifiers for each terminal type
@@ -93,14 +99,13 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
         title = 'PowerShell'
         break
       case 'ubuntu':
+      default:
         // BUG FIX: Must pass 'wsl.exe' (not undefined) to trigger WSL Ubuntu mode in pty-manager
         // The pty-manager checks if shell.includes('wsl') to determine WSL mode
+        // Default case also opens Ubuntu for safety (in case of unexpected values)
         shell = 'wsl.exe'
         title = 'Ubuntu'
         break
-      default:
-        shell = state.settings.defaultShell || undefined
-        title = 'Terminal'
     }
     
     try {
@@ -184,9 +189,16 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
 
   /**
    * Handle creating a new tab in THIS specific pane
+   * BUG FIX: Changed from 'default' to 'ubuntu' so + button opens WSL Ubuntu
+   * 
+   * REASONING:
+   * - The + button should open the preferred working shell (WSL Ubuntu)
+   * - Previously it used 'default' which relied on settings.defaultShell (PowerShell)
+   * - Now it explicitly uses 'ubuntu' to open WSL Ubuntu by default
+   * - PowerShell icon button is still available for explicit PowerShell access
    */
   const handleNewTab = useCallback(async () => {
-    await handleNewTabWithShell('default')
+    await handleNewTabWithShell('ubuntu')  // Changed from 'default' to 'ubuntu'
   }, [handleNewTabWithShell])
 
   /**
@@ -269,7 +281,7 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
               e.stopPropagation()
               handleNewTab()
             }}
-            title="New terminal"
+            title="New Ubuntu (WSL) terminal"
           >
             <span className={styles.newTabIcon}>+</span>
           </button>
