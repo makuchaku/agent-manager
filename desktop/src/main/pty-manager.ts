@@ -154,36 +154,41 @@ export class PtyManager {
     
     console.info(`[pty] Spawning shell: ${file} (cwd: ${workingDir || 'default'})`)
 
-    // Build minimal environment to avoid issues with inherited Electron env vars
-    const minimalEnv: Record<string, string> = {
-      PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
-      HOME: process.env.HOME || '',
-      USER: process.env.USER || '',
-      SHELL: file,
+    // Build environment for PTY process
+    // 
+    // BUG FIX: Restore full process.env inheritance for Windows
+    //
+    // REASONING:
+    // - The original implementation (commit 9bf0dab) used `...process.env` to inherit ALL
+    //   environment variables from the parent Electron process
+    // - Commit 9d8cea8 "Fixes for mac" changed to "minimal environment" approach which only
+    //   copies specific whitelisted variables
+    // - This broke Windows applications (including PowerShell and opencode) that depend
+    //   on many environment variables not included in the minimal list
+    // - Windows requires many variables for proper operation: ComSpec, ProgramFiles,
+    //   TEMP, TMP, and dozens more for application compatibility
+    //
+    // IMPLEMENTATION:
+    // - Start with all parent process environment variables using `...process.env`
+    // - Override TERM and COLORTERM to ensure proper terminal capability detection
+    // - Override SHELL to match the actual shell being spawned
+    // - Allow extraEnv to add any custom variables needed
+    //
+    // SECURITY NOTE:
+    // - Inheriting all env vars from Electron is generally safe
+    // - Node/Electron env vars are harmless to child processes
+    // - This is standard practice for terminal emulators
+    const env: Record<string, string> = {
+      ...process.env,  // Inherit ALL environment variables (critical for Windows)
       TERM: 'xterm-256color',
-      LANG: process.env.LANG || 'en_US.UTF-8',
+      COLORTERM: 'truecolor',  // Required for modern TUI apps (opencode, etc.)
+      SHELL: file,
       ...extraEnv,
     }
     
-    // Keep some important env vars if they exist
-    if (process.env.LOGNAME) minimalEnv.LOGNAME = process.env.LOGNAME
-    if (process.env.TMPDIR) minimalEnv.TMPDIR = process.env.TMPDIR
-    
-    // Windows-specific variables required for PowerShell
-    if (process.platform === 'win32') {
-      if (process.env.SYSTEMROOT) minimalEnv.SYSTEMROOT = process.env.SYSTEMROOT
-      if (process.env.WINDIR) minimalEnv.WINDIR = process.env.WINDIR
-      if (process.env.USERPROFILE) minimalEnv.USERPROFILE = process.env.USERPROFILE
-      if (process.env.APPDATA) minimalEnv.APPDATA = process.env.APPDATA
-      if (process.env.LOCALAPPDATA) minimalEnv.LOCALAPPDATA = process.env.LOCALAPPDATA
-      if (process.env.COMPUTERNAME) minimalEnv.COMPUTERNAME = process.env.COMPUTERNAME
-      if (process.env.USERNAME) minimalEnv.USERNAME = process.env.USERNAME
-      if (process.env.PATHEXT) minimalEnv.PATHEXT = process.env.PATHEXT
-      if (process.env.SESSIONNAME) minimalEnv.SESSIONNAME = process.env.SESSIONNAME
-      if (process.env.DRIVERDATA) minimalEnv.DRIVERDATA = process.env.DRIVERDATA
-      // Copy PowerShell-specific vars
-      if (process.env.PSModulePath) minimalEnv.PSModulePath = process.env.PSModulePath
-    }
+    // Ensure critical variables are strings (not undefined)
+    if (!env.PATH) env.PATH = process.env.PATH || '/usr/local/bin:/usr/bin:/bin'
+    if (!env.HOME) env.HOME = process.env.HOME || ''
 
     let proc: pty.IPty
     let attemptedShells = [file]
@@ -194,7 +199,7 @@ export class PtyManager {
         cols: 80,
         rows: 24,
         cwd: finalCwd,
-        env: minimalEnv,
+        env,
       })
     } catch (error) {
       console.error(`[pty] Failed to spawn ${file}, trying fallback...`, error)
@@ -203,14 +208,14 @@ export class PtyManager {
       const fallbackShell = '/bin/sh'
       if (file !== fallbackShell && existsSync(fallbackShell)) {
         attemptedShells.push(fallbackShell)
-        minimalEnv.SHELL = fallbackShell
+        env.SHELL = fallbackShell
         try {
           proc = pty.spawn(fallbackShell, [], {
             name: 'xterm-256color',
             cols: 80,
             rows: 24,
             cwd: finalCwd,
-            env: minimalEnv,
+            env,
           })
           console.info(`[pty] Fallback to ${fallbackShell} succeeded`)
         } catch (fallbackError) {
