@@ -78,9 +78,21 @@ export function TabGroup({ paneId, tabs, activeTabId, projectId }: TabGroupProps
     // Determine shell based on selection
     let shell: string | undefined
     let title: string
+    // BUG FIX: Always use pwsh.exe (PowerShell 7+) on Windows
+    // 
+    // REASONING:
+    // - pwsh.exe is the modern cross-platform PowerShell (v7+)
+    // - Provides better compatibility with modern tooling and scripts
+    // - Windows PowerShell (powershell.exe v5.1) is legacy and lacks modern features
+    // - Using pwsh.exe ensures consistent behavior across all Windows installations
+    //
+    // REQUIREMENT:
+    // - PowerShell 7+ must be installed on the system
+    // - Download from: https://github.com/PowerShell/PowerShell/releases
+    // - Or install via: winget install Microsoft.PowerShell
     switch (shellName) {
       case 'powershell':
-        shell = 'powershell.exe'
+        shell = 'pwsh.exe'
         title = 'PowerShell'
         break
       case 'ubuntu':

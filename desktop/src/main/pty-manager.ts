@@ -34,9 +34,24 @@ function findValidShell(preferredShell?: string): string {
   // Platform-specific fallbacks
   const isWindows = process.platform === 'win32'
   if (isWindows) {
-    // Use bare command first - let Windows resolve via PATH
-    // This ensures we get PowerShell 7+ (pwsh) if installed, or Windows PowerShell
-    return 'powershell.exe'
+    // BUG FIX: Always use pwsh.exe (PowerShell 7+) on Windows
+    // 
+    // REASONING:
+    // - pwsh.exe is the modern cross-platform PowerShell (v7+)
+    // - It provides better compatibility with modern tooling and scripts
+    // - Windows PowerShell (powershell.exe v5.1) is legacy and lacks modern features
+    // - pwsh.exe is the standard executable name for PowerShell Core/7+
+    // 
+    // REQUIREMENT:
+    // - PowerShell 7+ must be installed on the system
+    // - Download from: https://github.com/PowerShell/PowerShell/releases
+    // - Or install via: winget install Microsoft.PowerShell
+    // 
+    // FALLBACK:
+    // - If pwsh.exe is not found in PATH, node-pty spawn will fail
+    // - The error will be caught and propagated to the UI
+    // - Users should install PowerShell 7+ to use terminal features
+    return 'pwsh.exe'
   }
   
   // macOS/Linux fallbacks - prioritize zsh on macOS, bash on Linux
