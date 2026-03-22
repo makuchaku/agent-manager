@@ -83,26 +83,24 @@ export function TabBar() {
     // Determine shell based on selection
     let shell: string | undefined
     let title: string
-    // BUG FIX: Always use pwsh.exe (PowerShell 7+) on Windows
+    // BUG FIX: Use explicit shell identifiers for each terminal type
     // 
     // REASONING:
-    // - pwsh.exe is the modern cross-platform PowerShell (v7+)
-    // - Provides better compatibility with modern tooling and scripts
-    // - Windows PowerShell (powershell.exe v5.1) is legacy and lacks modern features
-    // - Using pwsh.exe ensures consistent behavior across all Windows installations
+    // - PowerShell 7+ (pwsh.exe): Modern PowerShell with better cross-platform support
+    // - WSL Ubuntu (wsl.exe): Windows Subsystem for Linux with Ubuntu distro
+    // - The pty-manager detects 'wsl' in the shell string to trigger WSL mode with '-d Ubuntu' args
+    // - Passing undefined causes fallback to default shell (PowerShell), breaking WSL functionality
     //
-    // REQUIREMENT:
-    // - PowerShell 7+ must be installed on the system
-    // - Download from: https://github.com/PowerShell/PowerShell/releases
-    // - Or install via: winget install Microsoft.PowerShell
+    // NOTE: Shell parameter must contain 'wsl' substring for pty-manager to recognize WSL mode
     switch (shellName) {
       case 'powershell':
         shell = 'pwsh.exe'
         title = 'PowerShell'
         break
       case 'ubuntu':
-        // On Windows, passing undefined triggers WSL Ubuntu default
-        shell = undefined
+        // BUG FIX: Must pass 'wsl.exe' (not undefined) to trigger WSL Ubuntu mode in pty-manager
+        // The pty-manager checks if shell.includes('wsl') to determine WSL mode
+        shell = 'wsl.exe'
         title = 'Ubuntu'
         break
     }
