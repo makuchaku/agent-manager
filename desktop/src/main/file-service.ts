@@ -5,6 +5,11 @@ import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
 
+// File operation constants
+const MAX_FILE_SIZE_MB = 50
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+const MAX_TRAVERSAL_DEPTH = 8
+
 function isEnvFile(name: string): boolean {
   return /^\.env($|\.)/.test(name)
 }
@@ -26,7 +31,10 @@ const SKIP_DIRS = new Set([
 
 export class FileService {
   static async getTree(dirPath: string, depth = 0): Promise<FileNode[]> {
-    if (depth > 8) return [] // prevent infinite recursion
+    if (depth > MAX_TRAVERSAL_DEPTH) {
+      console.warn(`[file] Max traversal depth reached at ${dirPath}`)
+      return []
+    }
 
     // Use git ls-files if in a git repo for gitignore respect
     if (depth === 0) {
@@ -86,7 +94,10 @@ export class FileService {
   }
 
   private static async findEnvFiles(basePath: string, currentPath = basePath, depth = 0): Promise<string[]> {
-    if (depth > 8) return []
+    if (depth > MAX_TRAVERSAL_DEPTH) {
+      console.warn(`[file] Max depth reached in findEnvFiles at ${currentPath}`)
+      return []
+    }
 
     const entries = await readdir(currentPath, { withFileTypes: true })
     const files: string[] = []
@@ -153,7 +164,24 @@ export class FileService {
   }
 
   static async readFile(filePath: string): Promise<string> {
-    return fsReadFile(filePath, 'utf-8')
+    // Check file size before reading
+    try {
+      const stats = await stat(filePath)
+      if (stats.size > MAX_FILE_SIZE_BYTES) {
+        throw new Error(`File too large: ${stats.size} bytes (max: ${MAX_FILE_SIZE_BYTES})`)
+      }
+    } catch (err) {
+      // If stat fails, continue anyway and let readFile handle the error
+      console.warn(`[file] Could not stat file before reading: ${filePath}`, err)
+    }
+    
+    const startTime = Date.now()
+    const content = await fsReadFile(filePath, 'utf-8')
+    const duration = Date.now() - startTime
+    if (duration > 500) {
+      console.log(`[file] Slow read: ${filePath} took ${duration}ms (${content.length} bytes)`)
+    }
+    return content
   }
 
   static async readFileBinary(filePath: string): Promise<Buffer> {

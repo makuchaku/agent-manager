@@ -1,6 +1,12 @@
 // IPC channel constants shared between main and renderer
+// CHANNEL_VERSION is used for future migrations if needed
+export const CHANNEL_VERSION = 1
+export const MAX_CHANNEL_LENGTH = 64
 
 export const IPC = {
+  // ============================================================================
+  // GIT OPERATIONS - Repository and version control
+  // ============================================================================
   // Git operations
   GIT_GET_STATUS: 'git:get-status',
   GIT_GET_DIFF: 'git:get-diff',
@@ -15,6 +21,9 @@ export const IPC = {
   GIT_CHECKOUT_BRANCH: 'git:checkout-branch',
   GIT_CREATE_BRANCH: 'git:create-branch',
 
+  // ============================================================================
+  // PTY OPERATIONS - Terminal emulation
+  // ============================================================================
   // PTY operations
   PTY_CREATE: 'pty:create',
   PTY_WRITE: 'pty:write',
@@ -24,6 +33,9 @@ export const IPC = {
   PTY_REATTACH: 'pty:reattach',
   PTY_DATA: 'pty:data', // prefix for events: `pty:data:{id}`
 
+  // ============================================================================
+  // FILE OPERATIONS - Filesystem access
+  // ============================================================================
   // File operations
   FS_GET_TREE: 'fs:get-tree',
   FS_GET_TREE_WITH_STATUS: 'fs:get-tree-with-status',

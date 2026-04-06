@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Allotment } from 'allotment'
 import 'allotment/dist/style.css'
 import { useAppStore } from './store/app-store'
@@ -24,6 +24,15 @@ export function App() {
   console.log('[App] App component rendering...')
   useShortcuts()
   usePrStatusPoller()
+  
+  // Performance monitoring in development
+  const [renderCount, setRenderCount] = useState(0)
+  useEffect(() => {
+    setRenderCount(c => c + 1)
+    if (process.env.NODE_ENV === 'development' && renderCount > 1) {
+      console.log(`[App] Re-render #${renderCount}`)
+    }
+  })
 
   useEffect(() => {
     if (!window.api?.ui) return

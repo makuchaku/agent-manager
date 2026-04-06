@@ -96,6 +96,11 @@ interface UnresolvedThreadCacheEntry {
 
 class GithubAuthError extends Error {}
 
+interface InFlightRequest {
+  promise: Promise<unknown>
+  timestamp: number
+}
+
 export class GithubService {
   private static AUTH_TOKEN_REFRESH_MS = 60_000
   private static OPEN_PR_LIST_LIMIT = 50
@@ -109,6 +114,7 @@ export class GithubService {
   private static authToken: string | null = null
   private static authTokenChecked = false
   private static authTokenFetchedAt = 0
+  private static inFlightRequests = new Map<string, InFlightRequest>()
 
   static async isGhAvailable(): Promise<boolean> {
     if (this.ghAvailable !== null) return this.ghAvailable
@@ -146,6 +152,9 @@ export class GithubService {
   }
 
   static async getPrStatuses(repoPath: string, branches: string[]): Promise<PrLookupResult> {
+    const requestId = `pr-status-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    console.log(`[github:${requestId}] Fetching PR statuses for ${branches.length} branches`)
+    
     if (!(await this.isGhAvailable())) {
       return { available: false, error: 'gh_not_installed', data: {} }
     }
@@ -163,6 +172,7 @@ export class GithubService {
         branches
           .map((branch) => branch.trim())
           .filter(Boolean)
+          .slice(0, 100) // Limit to 100 branches max to prevent query complexity issues
       )
     ).sort()
 
@@ -664,6 +674,10 @@ export class GithubService {
     variables: Record<string, string | number | null>,
     token: string
   ): Promise<T> {
+    const requestStart = Date.now()
+    const querySize = JSON.stringify({ query, variables }).length
+    console.log(`[github:graphql] Query size: ${querySize} bytes`)
+    
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10_000)
 

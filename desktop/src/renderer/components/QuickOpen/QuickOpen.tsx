@@ -39,19 +39,50 @@ function flattenTree(nodes: FileNode[], basePath: string): FileEntry[] {
   return result
 }
 
-/** Simple fuzzy match: checks if query chars appear in order in target. Returns matched indices or null. */
+/** Simple fuzzy match with scoring: checks if query chars appear in order in target. 
+ * Returns matched indices or null. Higher scores for consecutive matches.
+ */
 function fuzzyMatch(query: string, target: string): number[] | null {
   const lowerQuery = query.toLowerCase()
   const lowerTarget = target.toLowerCase()
   const indices: number[] = []
   let qi = 0
+  let consecutiveBonus = 0
+  
   for (let ti = 0; ti < lowerTarget.length && qi < lowerQuery.length; ti++) {
     if (lowerTarget[ti] === lowerQuery[qi]) {
       indices.push(ti)
+      // Bonus for consecutive matches
+      if (indices.length > 1 && indices[indices.length - 2] === ti - 1) {
+        consecutiveBonus += 5
+      }
       qi++
     }
   }
   return qi === lowerQuery.length ? indices : null
+}
+
+/** Calculate fuzzy match score for sorting results */
+function calculateFuzzyScore(query: string, target: string): number {
+  const indices = fuzzyMatch(query, target)
+  if (!indices) return -1
+  
+  // Base score from match
+  let score = indices.length * 10
+  
+  // Bonus for filename match vs path match
+  const lastSlash = target.lastIndexOf('/')
+  const filenameStart = lastSlash + 1
+  if (indices[0] >= filenameStart) {
+    score += 100 // Filename match is better
+  }
+  
+  // Bonus for exact match start
+  if (indices[0] === 0 || indices[0] === filenameStart) {
+    score += 50
+  }
+  
+  return score
 }
 
 function HighlightedPath({ text, indices }: { text: string; indices: number[] }) {

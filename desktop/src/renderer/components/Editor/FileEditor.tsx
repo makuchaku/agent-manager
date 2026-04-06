@@ -44,8 +44,24 @@ function getLanguage(path: string): string {
     sh: 'shell',
     bash: 'shell',
     toml: 'ini',
+    vue: 'vue',
+    svelte: 'svelte',
+    dockerfile: 'dockerfile',
+    graphql: 'graphql',
   }
   return map[ext || ''] || 'plaintext'
+}
+
+/** Get editor options based on file type */
+function getEditorOptions(filePath: string): { wordWrap: 'on' | 'off'; tabSize: number } {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  if (['md', 'markdown', 'txt'].includes(ext || '')) {
+    return { wordWrap: 'on', tabSize: 2 }
+  }
+  if (['py', 'yml', 'yaml'].includes(ext || '')) {
+    return { wordWrap: 'off', tabSize: 4 }
+  }
+  return { wordWrap: 'off', tabSize: 2 }
 }
 
 /**

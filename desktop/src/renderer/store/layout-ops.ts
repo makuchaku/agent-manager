@@ -7,9 +7,24 @@
 
 import type { Pane, TabGroup, Split, ProjectLayout, Tab, SplitDirection } from './types'
 
+/** Maximum allowed depth for pane tree to prevent stack overflow */
+const MAX_TREE_DEPTH = 10
+
 /**
- * Generate a unique ID for panes
+ * Validate that a pane tree doesn't exceed maximum depth
  */
+export function validateTreeDepth(root: Pane, currentDepth = 0): boolean {
+  if (currentDepth > MAX_TREE_DEPTH) {
+    console.warn(`[layout] Tree depth exceeds maximum ${MAX_TREE_DEPTH}`)
+    return false
+  }
+  
+  if (root.type === 'split') {
+    return root.children.every(child => validateTreeDepth(child, currentDepth + 1))
+  }
+  
+  return true
+}
 export function generatePaneId(): string {
   return `pane-${crypto.randomUUID()}`
 }
@@ -158,10 +173,34 @@ export function findTabGroupContainingTab(root: Pane, tabId: string): TabGroup |
 }
 
 /**
- * Check if a pane is empty (has no tabs)
+ * Generate a unique ID for panes
  */
-export function isPaneEmpty(pane: Pane): boolean {
-  return pane.type === 'tabGroup' && pane.tabs.length === 0
+export function generatePaneId(): string {
+  return `pane-${crypto.randomUUID()}`
+}
+
+/**
+ * Check for pane ID collisions in the tree
+ * Returns true if any duplicate IDs are found
+ */
+export function hasPaneIdCollision(root: Pane): boolean {
+  const ids = new Set<string>()
+  const duplicates = new Set<string>()
+  
+  function collectIds(pane: Pane) {
+    if (ids.has(pane.id)) {
+      duplicates.add(pane.id)
+    } else {
+      ids.add(pane.id)
+    }
+    
+    if (pane.type === 'split') {
+      pane.children.forEach(collectIds)
+    }
+  }
+  
+  collectIds(root)
+  return duplicates.size > 0
 }
 
 /**

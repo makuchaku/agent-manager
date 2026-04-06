@@ -2,11 +2,19 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { useAppStore, hydrateFromDisk } from './store/app-store'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import '@xterm/xterm/css/xterm.css'
 import './styles/global.css'
 
 console.log('[Renderer] Starting application...')
+console.log(`[Renderer] Build timestamp: ${new Date().toISOString()}`)
+
+// Feature flags for gradual rollout
+const FEATURE_FLAGS = {
+  enableNewShortcuts: true,
+  enablePerformanceMetrics: process.env.NODE_ENV === 'development',
+  enableErrorBoundary: true,
+}
 
 // Expose store for e2e testing
 ;(window as any).__store = useAppStore
@@ -15,18 +23,29 @@ console.log('[Renderer] Store exposed to window')
 // Apply UI font size setting to CSS custom property
 function UiFontSizeSetter() {
   const uiFontSize = useAppStore((s) => s.settings.uiFontSize)
+  const [mounted, setMounted] = useState(false)
+  
   useEffect(() => {
     document.documentElement.style.setProperty('--text-base', `${uiFontSize}px`)
+    setMounted(true)
+    console.log(`[Renderer] Font size applied: ${uiFontSize}px`)
   }, [uiFontSize])
-  return null
+  
+  return mounted ? null : <div style={{ display: 'none' }}>Loading...</div>
 }
 
 // Apply theme setting (dark/light) to data-theme attribute
 function ThemeSetter() {
   const theme = useAppStore((s) => s.settings.theme)
+  const reduceMotion = useAppStore((s) => s.settings.reduceMotion)
+  
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+    if (reduceMotion) {
+      document.documentElement.setAttribute('data-reduce-motion', 'true')
+    }
+    console.log(`[Renderer] Theme applied: ${theme}, reduceMotion: ${reduceMotion}`)
+  }, [theme, reduceMotion])
   return null
 }
 

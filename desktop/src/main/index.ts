@@ -5,8 +5,11 @@ import { registerIpcHandlers } from './ipc'
 import { IPC } from '../shared/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
+const windowCreationStartTime = Date.now()
 
 function createWindow(): void {
+  const windowStartTime = Date.now()
+  console.log('[main] Creating window...')
   mainWindow = new BrowserWindow({
     // Window size defaults to monitor bounds when maximize is enabled.
     // Fixed dimensions removed to allow full-screen maximize on startup.
@@ -42,8 +45,14 @@ function createWindow(): void {
 
   if (!process.env.CI_TEST) {
     mainWindow.on('ready-to-show', () => {
+      const loadTime = Date.now() - windowStartTime
+      console.log(`[main] Window ready in ${loadTime}ms`)
       mainWindow?.show()
       mainWindow?.maximize() // Force maximized state on launch
+    })
+    
+    mainWindow.webContents.on('dom-ready', () => {
+      console.log('[main] DOM ready, renderer initialized')
     })
   }
 
@@ -175,10 +184,12 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
+  app.on('browser-window-focus', () => {
+    console.log('[main] Window focused')
+  })
+  
+  app.on('browser-window-blur', () => {
+    console.log('[main] Window blurred')
   })
 })
 

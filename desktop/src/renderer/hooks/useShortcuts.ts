@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useAppStore } from '../store/app-store'
 
+/** Tracks which modifier keys are currently pressed for conflict detection */
+const activeModifiers = new Set<string>()
+
 /**
  * Helper function to check if the keyboard event target is within a terminal.
  * This is used to bypass app-level shortcuts when the user is interacting with
@@ -38,6 +41,12 @@ export function useShortcuts() {
       const isTerminal = isTerminalFocused(e.target)
       const isCopyOrPaste = (e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')
       const isPrint = (e.ctrlKey || e.metaKey) && e.key === 'p' && !e.shiftKey && !e.altKey
+      
+      // Track modifier key state for debugging
+      if (e.metaKey) activeModifiers.add('meta')
+      if (e.ctrlKey) activeModifiers.add('ctrl')
+      if (e.shiftKey) activeModifiers.add('shift')
+      if (e.altKey) activeModifiers.add('alt')
       
       if (isTerminal && (isCopyOrPaste || isPrint)) {
         // Allow these events to pass through to the terminal/system.
@@ -86,6 +95,10 @@ export function useShortcuts() {
       function consume() {
         e.preventDefault()
         e.stopPropagation()
+        // Log shortcut execution for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[shortcuts] Executed: ${e.key} with modifiers: [${Array.from(activeModifiers).join(', ')}]`)
+        }
       }
 
       // ── Quick open: Cmd+P ──

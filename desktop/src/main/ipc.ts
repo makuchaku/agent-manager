@@ -12,6 +12,12 @@ import { FileService, type FileNode } from './file-service'
 
 const ptyManager = new PtyManager()
 
+// Request tracking for debugging
+let requestCounter = 0
+function generateRequestId(): string {
+  return `req-${++requestCounter}-${Date.now()}`
+}
+
 interface FsWatchSubscriber {
   webContents: WebContents
   refs: number
@@ -45,6 +51,13 @@ interface TabLike {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+// Input validation helpers
+function isValidPath(path: string): boolean {
+  if (!path || typeof path !== 'string') return false
+  if (path.includes('\0')) return false // null bytes not allowed
+  return path.length > 0 && path.length < 4096 // reasonable path length limit
 }
 
 function isProjectLike(value: unknown): value is ProjectLike {
@@ -174,9 +187,16 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
 }
 
 export function registerIpcHandlers(): void {
+  console.log('[ipc] Registering IPC handlers...')
+  const registrationStart = Date.now()
+  
   // Git handlers - operate on project repo path directly
   ipcMain.handle(IPC.GIT_GET_STATUS, async (_e, repoPath: string) => {
-    return GitService.getStatus(repoPath)
+    if (!isValidPath(repoPath)) throw new Error('Invalid path')
+    const start = performance.now()
+    const result = await GitService.getStatus(repoPath)
+    console.log(`[ipc] git:get-status took ${(performance.now() - start).toFixed(2)}ms`)
+    return result
   })
 
   ipcMain.handle(IPC.GIT_GET_DIFF, async (_e, repoPath: string, staged: boolean) => {

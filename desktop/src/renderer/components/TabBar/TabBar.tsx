@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { useAppStore } from '../../store/app-store'
 import type { Tab } from '../../store/types'
 import { Tooltip } from '../Tooltip/Tooltip'
@@ -27,6 +27,8 @@ export function TabBar() {
   const settings = useAppStore((s) => s.settings)
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
+  const [showScrollButtons, setShowScrollButtons] = useState(false)
+  const tabBarRef = useRef<HTMLDivElement>(null)
   const tabs = allTabs.filter((t) => t.projectId === activeProjectId)
   
   const activeProject = projects.find(p => p.id === activeProjectId)

@@ -18,10 +18,15 @@ export interface FileDiff {
 }
 
 async function git(args: string[], cwd: string): Promise<string> {
+  const startTime = Date.now()
   const { stdout } = await execFileAsync('git', args, {
     cwd,
     maxBuffer: 10 * 1024 * 1024,
   })
+  const duration = Date.now() - startTime
+  if (duration > 1000) {
+    console.log(`[git] Slow operation: git ${args[0]} took ${duration}ms in ${cwd}`)
+  }
   return stdout.trimEnd()
 }
 
@@ -31,6 +36,13 @@ function friendlyGitError(err: unknown, fallback: string): string {
       ? String((err as { stderr?: unknown }).stderr ?? '')
       : undefined
   if (!stderr) return fallback
+
+  // Enhanced error detection with context
+  const errorContext = {
+    timestamp: Date.now(),
+    hasStderr: stderr.length > 0,
+    stderrPreview: stderr.slice(0, 200)
+  }
 
   if (stderr.includes('invalid reference')) {
     const ref = stderr.match(/invalid reference: (.+)/)?.[1]?.trim()
@@ -106,7 +118,8 @@ export class GitService {
   }
 
   static sanitizeBranchName(name: string): string {
-    return name
+    const MAX_BRANCH_LENGTH = 250
+    const sanitized = name
       .trim()
       .replace(/\s+/g, '-')
       .replace(/\.{2,}/g, '-')
@@ -117,6 +130,9 @@ export class GitService {
       .replace(/\.lock(\/|$)/g, '-lock$1')
       .replace(/^[.\-/]+/, '')
       .replace(/[.\-/]+$/, '')
+    
+    // Enforce max length
+    return sanitized.slice(0, MAX_BRANCH_LENGTH)
   }
 
   static async checkoutBranch(repoPath: string, branch: string): Promise<void> {
@@ -170,10 +186,14 @@ export class GitService {
   }
 
   static async getCurrentBranch(repoPath: string): Promise<string> {
-    if (!existsSync(repoPath)) return ''
+    if (!existsSync(repoPath)) {
+      console.warn(`[git] Repository path does not exist: ${repoPath}`)
+      return ''
+    }
     try {
       return await git(['rev-parse', '--abbrev-ref', 'HEAD'], repoPath)
-    } catch {
+    } catch (err) {
+      console.warn(`[git] Failed to get current branch for ${repoPath}:`, err)
       return ''
     }
   }

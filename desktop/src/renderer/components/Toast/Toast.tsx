@@ -1,14 +1,26 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/app-store'
 import type { Toast } from '../../store/types'
 import styles from './Toast.module.css'
 
 function ToastItem({ toast }: { toast: Toast }) {
   const dismissToast = useAppStore((s) => s.dismissToast)
+  const [progress, setProgress] = useState(100)
 
   useEffect(() => {
-    const timer = setTimeout(() => dismissToast(toast.id), 5000)
-    return () => clearTimeout(timer)
+    const duration = 5000
+    const interval = 50 // Update every 50ms
+    const step = 100 / (duration / interval)
+    
+    const progressTimer = setInterval(() => {
+      setProgress(p => Math.max(0, p - step))
+    }, interval)
+    
+    const timer = setTimeout(() => dismissToast(toast.id), duration)
+    return () => {
+      clearTimeout(timer)
+      clearInterval(progressTimer)
+    }
   }, [toast.id, dismissToast])
 
   return (
@@ -17,6 +29,7 @@ function ToastItem({ toast }: { toast: Toast }) {
       onClick={() => dismissToast(toast.id)}
     >
       <span className={styles.message}>{toast.message}</span>
+      <div className={styles.progressBar} style={{ width: `${progress}%` }} />
     </div>
   )
 }

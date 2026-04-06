@@ -1,5 +1,26 @@
 import type { PrInfo } from '@shared/github-types'
 
+/** Validation constants for user inputs */
+export const VALIDATION = {
+  MAX_BRANCH_NAME_LENGTH: 250,
+  MAX_PROJECT_NAME_LENGTH: 100,
+  MAX_TAB_TITLE_LENGTH: 50,
+  MIN_FONT_SIZE: 8,
+  MAX_FONT_SIZE: 72,
+} as const
+
+/** Project health status indicators */
+export type ProjectHealth = 'healthy' | 'warning' | 'error'
+
+/** Tab type discriminator functions */
+export function isTerminalTab(tab: Tab): tab is Tab & { type: 'terminal' } {
+  return tab.type === 'terminal'
+}
+
+export function isFileTab(tab: Tab): tab is Tab & { type: 'file' } {
+  return tab.type === 'file'
+}
+
 export interface StartupCommand {
   name: string
   command: string
@@ -72,19 +93,23 @@ export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
 export type Theme = 'dark' | 'light'
 
 export interface Settings {
-  confirmOnClose: boolean
-  autoSaveOnBlur: boolean
-  defaultShell: string
-  restoreProject: boolean
-  diffInline: boolean
-  terminalFontSize: number
-  editorFontSize: number
-  editorLineHeight: number
-  uiFontSize: number
-  terminalStartupCommand: string
-  theme: Theme
-  editorTheme: string
-  wordWrap: 'on' | 'off' | 'wordWrapColumn' | 'bounded'
+  readonly confirmOnClose: boolean
+  readonly autoSaveOnBlur: boolean
+  readonly defaultShell: string
+  readonly restoreProject: boolean
+  readonly diffInline: boolean
+  readonly terminalFontSize: number
+  readonly editorFontSize: number
+  readonly editorLineHeight: number
+  readonly uiFontSize: number
+  readonly terminalStartupCommand: string
+  readonly theme: Theme
+  readonly editorTheme: string
+  readonly wordWrap: 'on' | 'off' | 'wordWrapColumn' | 'bounded'
+  /** Enable reduced motion for accessibility */
+  readonly reduceMotion?: boolean
+  /** Show line numbers in editor */
+  readonly showLineNumbers?: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -101,6 +126,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   editorTheme: 'vs',
   wordWrap: 'on',
+  reduceMotion: false,
+  showLineNumbers: true,
 }
 
 export interface Toast {

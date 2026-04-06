@@ -21,6 +21,23 @@
   cursor: pointer;
   animation: slideIn 0.2s ease-out;
   border-left: 3px solid var(--border-strong);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Progress bar at bottom of toast */
+.progressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent-blue);
+  opacity: 0.5;
+  transition: width 50ms linear;
+}
+
+.toast.error .progressBar {
+  background: var(--accent-red);
 }
 
 .toast.error {

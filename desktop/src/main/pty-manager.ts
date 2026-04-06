@@ -13,6 +13,8 @@ interface PtyInstance {
   replayChunks: string[]
   replayChars: number
   projectId?: string
+  createdAt: number
+  shellVersion?: string
 }
 
 function findValidShell(preferredShell?: string): string {
@@ -105,9 +107,16 @@ function appendReplayChunk(instance: PtyInstance, chunk: string): void {
 export class PtyManager {
   private ptys = new Map<string, PtyInstance>()
   private nextId = 0
+  private readonly platform = process.platform
+  private readonly isWindows = process.platform === 'win32'
+  private readonly isMac = process.platform === 'darwin'
 
   create(workingDir: string, webContents: WebContents, shell?: string, command?: string[], initialWrite?: string, extraEnv?: Record<string, string>): string {
+    const createStart = Date.now()
     const id = `pty-${++this.nextId}`
+    
+    // Track memory usage
+    const memBefore = process.memoryUsage().heapUsed
 
     let file: string
     let args: string[]
@@ -237,7 +246,12 @@ export class PtyManager {
       replayChunks: [],
       replayChars: 0,
       projectId: extraEnv?.AGENT_ORCH_PROJECT_ID,
+      createdAt: Date.now(),
+      shellVersion: undefined
     }
+    
+    const memAfter = process.memoryUsage().heapUsed
+    console.log(`[pty] Created ${id} in ${Date.now() - createStart}ms, memory delta: ${((memAfter - memBefore) / 1024).toFixed(2)}KB`)
 
     let pendingWrite = initialWrite
     proc.onData((data) => {

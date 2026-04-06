@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import styles from './ConfirmDialog.module.css'
 
 interface Props {
@@ -11,6 +11,28 @@ interface Props {
 }
 
 export function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel, destructive = false }: Props) {
+  const [countdown, setCountdown] = useState(3)
+  const [canConfirm, setCanConfirm] = useState(!destructive)
+  
+  // Countdown for destructive actions
+  useEffect(() => {
+    if (!destructive || countdown === 0) {
+      setCanConfirm(true)
+      return
+    }
+    
+    const timer = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) {
+          setCanConfirm(true)
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+    
+    return () => clearInterval(timer)
+  }, [destructive, countdown])
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onCancel()
     if (e.key === 'Enter') onConfirm()
@@ -33,8 +55,9 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfi
             className={destructive ? styles.destructiveBtn : styles.confirmBtn}
             onClick={onConfirm}
             autoFocus
+            disabled={!canConfirm}
           >
-            {confirmLabel}
+            {canConfirm ? confirmLabel : `${confirmLabel} (${countdown}s)`}
           </button>
         </div>
       </div>

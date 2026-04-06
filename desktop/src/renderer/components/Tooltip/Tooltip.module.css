@@ -11,6 +11,28 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   white-space: nowrap;
+  /* Support for max-width constraint */
+  max-width: var(--tooltip-max-width, 300px);
+}
+
+/* Tooltip variants for different delay speeds */
+.tooltipFast {
+  animation-duration: 80ms;
+}
+
+.tooltipSlow {
+  animation-duration: 200ms;
+}
+
+/* Arrow indicator for tooltip */
+.tooltip::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  transform: rotate(45deg);
 }
 
 .top {

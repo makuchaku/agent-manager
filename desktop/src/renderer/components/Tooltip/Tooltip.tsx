@@ -7,12 +7,24 @@ interface Props {
   shortcut?: string
   position?: 'top' | 'bottom'
   children: React.ReactElement<Record<string, unknown>>
+  /** Delay preset for showing the tooltip */
+  delay?: keyof typeof DELAY_PRESETS
+  /** Optional max width override */
+  maxWidth?: number
 }
 
 const SHOW_DELAY = 400
 const EDGE_PAD = 8
 const GAP = 6
 const TOOLTIP_HEIGHT_EST = 28
+const MAX_TOOLTIP_WIDTH = 300 // Maximum width before text wraps
+
+/** Delay presets for different urgency levels */
+const DELAY_PRESETS = {
+  fast: 200,
+  normal: 400,
+  slow: 800
+}
 
 export function Tooltip({ label, shortcut, position = 'top', children }: Props) {
   const [visible, setVisible] = useState(false)

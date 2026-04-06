@@ -16,6 +16,12 @@ interface DiffFileData {
   isBinary: boolean
 }
 
+interface DiffStats {
+  filesChanged: number
+  additions: number
+  deletions: number
+}
+
 interface Props {
   repoPath: string
   active: boolean
@@ -27,6 +33,19 @@ const STATUS_LABELS: Record<string, string> = {
   deleted: 'D',
   renamed: 'R',
   untracked: 'U',
+}
+
+/** Calculate diff statistics from patch data */
+function calculateDiffStats(files: DiffFileData[]): DiffStats {
+  return files.reduce((stats, file) => {
+    stats.filesChanged++
+    const lines = file.patch.split('\n')
+    lines.forEach(line => {
+      if (line.startsWith('+') && !line.startsWith('+++')) stats.additions++
+      if (line.startsWith('-') && !line.startsWith('---')) stats.deletions++
+    })
+    return stats
+  }, { filesChanged: 0, additions: 0, deletions: 0 })
 }
 
 function patchIndicatesBinary(patch: string): boolean {

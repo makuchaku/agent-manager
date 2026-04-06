@@ -1,6 +1,17 @@
 @import './design-tokens.css';
 
 /* ═══════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES FOR COMPONENT COMMUNICATION
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --component-dragging: false;
+  --sidebar-width-current: 220px;
+  --right-panel-width-current: 280px;
+  --active-tab-count: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
    RESET + BASE
    ═══════════════════════════════════════════════════════ */
 
@@ -31,7 +42,13 @@ body {
 
 /* ═══════════════════════════════════════════════════════
    SCROLLBAR — thin, subtle, macOS-feeling
-   ═══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════
+   Note: Add scrollbar-gutter for stable layout during scroll
+ */
+
+html {
+  scrollbar-gutter: stable;
+}
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -53,6 +70,12 @@ body {
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Firefox scrollbar support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
 }
 
 /* ═══════════════════════════════════════════════════════

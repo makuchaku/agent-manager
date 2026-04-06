@@ -124,14 +124,35 @@
 
   /* ═══════════════════════════════════════════════════════
      TRANSITIONS
-     ═══════════════════════════════════════════════════════ */
+     ═══════════════════════════════════════════════════════
+     Note: Add reduced-motion support for accessibility
+     */
   --transition-fast: 80ms ease;
   --transition-default: 150ms ease;
   --transition-slow: 250ms ease;
+  --transition-instant: 0ms;
 
-  /* ═══════════════════════════════════════════════════════
-     LAYOUT
-     ═══════════════════════════════════════════════════════ */
+  /* Motion reduction - applied via data-reduce-motion attribute */
+  --motion-duration-multiplier: 1;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-multiplier: 0;
+  }
+}
+
+/* Manual override via data attribute */
+[data-reduce-motion="true"] {
+  --motion-duration-multiplier: 0 !important;
+}
+
+/* Apply motion reduction to all transitions */
+*, *::before, *::after {
+  animation-duration: calc(var(--motion-duration-multiplier) * var(--animation-duration, 0s)) !important;
+  transition-duration: calc(var(--motion-duration-multiplier) * var(--transition-duration, 0s)) !important;
+}
   --sidebar-width: 220px;
   --right-panel-width: 280px;
   --tab-height: 35px;

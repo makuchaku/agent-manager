@@ -9,11 +9,19 @@ const EVENT_BURST_MS = 120_000
 const PENDING_BURST_MS = 60_000
 const PR_POLL_HINT_EVENT = 'mickey:pr-poll-hint'
 
+/** Add jitter to prevent thundering herd */
+function getJitteredInterval(baseInterval: number): number {
+  const jitter = Math.random() * 5000 - 2500 // ±2.5 seconds
+  return Math.max(1000, baseInterval + jitter)
+}
+
 export function usePrStatusPoller(): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const runningRef = useRef(false)
   const queuedImmediateRef = useRef(false)
   const burstUntilRef = useRef(0)
+  const lastSuccessfulPollRef = useRef<number>(0)
+  const consecutiveFailuresRef = useRef(0)
 
   useEffect(() => {
     let disposed = false
@@ -25,7 +33,10 @@ export function usePrStatusPoller(): void {
       if (until > burstUntilRef.current) burstUntilRef.current = until
     }
 
-    const nextIntervalMs = () => (inBurst() ? FAST_POLL_INTERVAL : NORMAL_POLL_INTERVAL)
+    const nextIntervalMs = () => {
+      const base = inBurst() ? FAST_POLL_INTERVAL : NORMAL_POLL_INTERVAL
+      return getJitteredInterval(base)
+    }
 
     async function pollAll(): Promise<{ hasPendingChecks: boolean }> {
       const { projects, workspaces, setPrStatuses, setGhAvailability, updateWorkspaceBranch } =
@@ -120,11 +131,23 @@ export function usePrStatusPoller(): void {
 
       runningRef.current = true
       let hasPendingChecks = false
+      const pollStartTime = Date.now()
+      
       try {
         const result = await pollAll()
         hasPendingChecks = result.hasPendingChecks
+        lastSuccessfulPollRef.current = Date.now()
+        consecutiveFailuresRef.current = 0
+      } catch (err) {
+        consecutiveFailuresRef.current++
+        console.warn(`[pr-poller] Poll failed (attempt ${consecutiveFailuresRef.current}):`, err)
       } finally {
         runningRef.current = false
+      }
+      
+      const pollDuration = Date.now() - pollStartTime
+      if (pollDuration > 5000) {
+        console.warn(`[pr-poller] Slow poll: ${pollDuration}ms`)
       }
 
       if (disposed || document.hidden) return
