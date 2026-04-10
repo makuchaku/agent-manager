@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { AppState, PersistedState, Tab, ProjectLayout, SplitDirection, Pane } from './types'
 import { DEFAULT_SETTINGS } from './types'
+import { normalizeBootThemeSettings } from '../../shared/theme-settings'
 import { titleFromTerminalCommand } from './terminal-tab-title'
 import { 
   createTabGroup, 
@@ -10,6 +11,10 @@ import {
 } from './layout-ops'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
 
 /**
  * Helper: Add a tab to a specific TabGroup in the pane tree
@@ -711,9 +716,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     console.log('[hydrateState] Projects after migration:', projects.length)
     const saved = data.activeProjectId
     console.log('[hydrateState] Saved activeProjectId:', saved)
-    const settings = data.settings ? { ...DEFAULT_SETTINGS, ...data.settings } : { ...DEFAULT_SETTINGS }
+    const rawSettings = isRecord(data.settings) ? data.settings : null
+    const settingsWithoutLegacyEditorTheme = rawSettings
+      ? Object.fromEntries(Object.entries(rawSettings).filter(([key]) => key !== 'editorTheme'))
+      : {}
+    const bootThemeSettings = normalizeBootThemeSettings(rawSettings)
+    const restoreProject = typeof rawSettings?.restoreProject === 'boolean'
+      ? rawSettings.restoreProject
+      : (typeof rawSettings?.restoreWorkspace === 'boolean'
+          ? rawSettings.restoreWorkspace
+          : DEFAULT_SETTINGS.restoreProject)
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      ...settingsWithoutLegacyEditorTheme,
+      theme: bootThemeSettings.theme,
+      reduceMotion: bootThemeSettings.reduceMotion,
+      restoreProject,
+    }
     console.log('[hydrateState] Settings restoreProject:', settings.restoreProject, 'restoreWorkspace:', (data.settings as any)?.restoreWorkspace)
-    const shouldRestore = settings.restoreProject ?? (data.settings as any)?.restoreWorkspace ?? true
+    const shouldRestore = restoreProject
     console.log('[hydrateState] shouldRestore:', shouldRestore)
     const activeProjectId = shouldRestore
       ? ((saved && projects.some((p) => p.id === saved) ? saved : projects[0]?.id) ?? null)
@@ -1043,15 +1064,70 @@ function getPersistedSlice(state: AppState): PersistedState {
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+let persistenceTarget: 'disabled' | 'primary' | 'recovery' = 'disabled'
+
+export interface HydrationOptions {
+  shouldApply?: () => boolean
+  onWillApplyState?: () => void
+  onDidApplyState?: () => void
+}
+
+export type HydrationResult =
+  | { status: 'applied' }
+  | { status: 'skipped-live-session' }
+  | { status: 'empty' }
+  | { status: 'load-failed' }
+
+function canApplyHydrationState(options: HydrationOptions): boolean {
+  return options.shouldApply?.() ?? true
+}
+
+function applyHydrationState(options: HydrationOptions, apply: () => void): void {
+  options.onWillApplyState?.()
+  try {
+    apply()
+  } finally {
+    options.onDidApplyState?.()
+  }
+}
+
+export function enablePersistence(): void {
+  persistenceTarget = 'primary'
+}
+
+export function enableRecoveryPersistence(): void {
+  persistenceTarget = 'recovery'
+}
+
+export function getPersistedStateSnapshot(state: AppState = useAppStore.getState()): string {
+  return JSON.stringify(getPersistedSlice(state))
+}
+
+export function persistCurrentState(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  const state = getPersistedSlice(useAppStore.getState())
+  if (persistenceTarget === 'recovery') {
+    window.api.state.saveRecovery(state)
+    return
+  }
+  window.api.state.save(state)
+}
 
 function debouncedSave(state: AppState) {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    window.api.state.save(getPersistedSlice(state))
+    const persistedState = getPersistedSlice(state)
+    if (persistenceTarget === 'recovery') {
+      window.api.state.saveRecovery(persistedState)
+      return
+    }
+    window.api.state.save(persistedState)
   }, 500)
 }
 
 useAppStore.subscribe((state, prevState) => {
+  if (persistenceTarget === 'disabled') return
+
   if (
     state.projects !== prevState.projects ||
     state.tabs !== prevState.tabs ||
@@ -1068,13 +1144,20 @@ useAppStore.subscribe((state, prevState) => {
 })
 
 window.addEventListener('beforeunload', () => {
+  if (persistenceTarget === 'disabled') return
   if (saveTimer) clearTimeout(saveTimer)
-  window.api.state.saveSync(getPersistedSlice(useAppStore.getState()))
+  const persistedState = getPersistedSlice(useAppStore.getState())
+  if (persistenceTarget === 'recovery') {
+    window.api.state.saveRecoverySync(persistedState)
+    return
+  }
+  window.api.state.saveSync(persistedState)
 })
 
-export async function hydrateFromDisk(): Promise<void> {
+export async function hydrateFromDisk(options: HydrationOptions = {}): Promise<HydrationResult> {
   console.log('[Hydrate] Starting hydration from disk...')
   let livePtyIds: Set<string> | null = null
+  let appliedPersistedState = false
   try {
     console.log('[Hydrate] Listing live PTYs...')
     livePtyIds = new Set(await window.api.pty.list())
@@ -1088,12 +1171,22 @@ export async function hydrateFromDisk(): Promise<void> {
     const data = await window.api.state.load()
     console.log('[Hydrate] State loaded:', data ? 'yes' : 'no', data ? 'with keys: ' + Object.keys(data).join(', ') : '')
     if (data) {
+      if (!canApplyHydrationState(options)) {
+        console.warn('[Hydrate] Skipping persisted state because the live session changed before hydration finished')
+        return { status: 'skipped-live-session' }
+      }
       console.log('[Hydrate] Calling hydrateState...')
-      useAppStore.getState().hydrateState(data)
+      applyHydrationState(options, () => {
+        useAppStore.getState().hydrateState(data)
+      })
+      appliedPersistedState = true
       console.log('[Hydrate] hydrateState complete')
+    } else {
+      return { status: 'empty' }
     }
   } catch (err) {
     console.error('[Hydrate] Failed to load persisted state:', err)
+    return { status: 'load-failed' }
   }
 
   try {
@@ -1134,9 +1227,17 @@ export async function hydrateFromDisk(): Promise<void> {
       const validActiveTabId = currentActiveTab && currentActiveTab.projectId
         ? store.activeTabId
         : (finalTabs.find((t) => t.projectId === store.activeProjectId)?.id ?? null)
-      useAppStore.setState({ tabs: finalTabs, activeTabId: validActiveTabId })
+      if (!canApplyHydrationState(options)) {
+        console.warn('[Hydrate] Skipping PTY reconciliation because the live session changed before hydration finished')
+        return { status: 'skipped-live-session' }
+      }
+      applyHydrationState(options, () => {
+        useAppStore.setState({ tabs: finalTabs, activeTabId: validActiveTabId })
+      })
     }
   } catch (err) {
     console.error('Failed to reconcile PTY tabs:', err)
   }
+
+  return appliedPersistedState ? { status: 'applied' } : { status: 'empty' }
 }

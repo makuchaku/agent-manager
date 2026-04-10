@@ -136,8 +136,18 @@ const api = {
   state: {
     save: (data: unknown) =>
       ipcRenderer.invoke(IPC.STATE_SAVE, data),
+    saveRecovery: (data: unknown) =>
+      ipcRenderer.invoke(IPC.STATE_SAVE_RECOVERY, data),
     saveSync: (data: unknown) =>
       ipcRenderer.sendSync(IPC.STATE_SAVE_SYNC, data) as boolean,
+    saveRecoverySync: (data: unknown) =>
+      ipcRenderer.sendSync(IPC.STATE_SAVE_RECOVERY_SYNC, data) as boolean,
+    clearRecoverySync: () =>
+      ipcRenderer.sendSync(IPC.STATE_CLEAR_RECOVERY_SYNC) as boolean,
+    loadRecoverySync: () =>
+      ipcRenderer.sendSync(IPC.STATE_LOAD_RECOVERY_SYNC),
+    loadBootThemeSync: () =>
+      ipcRenderer.sendSync(IPC.STATE_LOAD_BOOT_THEME_SYNC),
     load: () =>
       ipcRenderer.invoke(IPC.STATE_LOAD),
   },

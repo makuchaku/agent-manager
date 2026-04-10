@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import Editor, { loader } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { useAppStore } from '../../store/app-store'
+import { resolveThemeState } from '../../theme/theme-policy'
 import styles from './Editor.module.css'
 
 // Disable TS/JS semantic diagnostics globally once — Monaco can't resolve project modules
@@ -185,6 +186,7 @@ export function FileEditor({ tabId, filePath, active }: Props) {
   const setTabUnsaved = useAppStore((s) => s.setTabUnsaved)
   const notifyTabSaved = useAppStore((s) => s.notifyTabSaved)
   const settings = useAppStore((s) => s.settings)
+  const editorTheme = resolveThemeState(settings).monacoTheme
 
   /**
    * BUG FIX: Check if this is an image file before attempting to load it.
@@ -275,7 +277,7 @@ export function FileEditor({ tabId, filePath, active }: Props) {
         height="100%"
         language={getLanguage(filePath)}
         value={content}
-        theme={settings.editorTheme}
+        theme={editorTheme}
         onChange={handleChange}
         onMount={handleEditorMount}
         options={{

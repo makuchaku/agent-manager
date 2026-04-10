@@ -1,10 +1,11 @@
 import { ipcMain, dialog, app, BrowserWindow, clipboard, type WebContents } from 'electron'
 import { join, relative } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { watch, type FSWatcher } from 'fs'
 import { IPC } from '../shared/ipc-channels'
+import { normalizeBootThemeSettings } from '../shared/theme-settings'
 import { PtyManager } from './pty-manager'
 import { GitService } from './git-service'
 import { GithubService } from './github-service'
@@ -72,13 +73,13 @@ function isTabLike(value: unknown): value is TabLike {
  * Load JSON file with fallback value
  */
 async function loadJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const { readFile } = await import('fs/promises')
-    const content = await readFile(filePath, 'utf-8')
-    return JSON.parse(content) as T
-  } catch {
+  if (!existsSync(filePath)) {
     return fallback
   }
+
+  const { readFile } = await import('fs/promises')
+  const content = await readFile(filePath, 'utf-8')
+  return JSON.parse(content) as T
 }
 
 /**
@@ -89,12 +90,43 @@ async function saveJsonFile(filePath: string, data: unknown): Promise<void> {
   await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
 }
 
+function loadJsonFileSync<T>(filePath: string, fallback: T): T {
+  try {
+    const content = readFileSync(filePath, 'utf-8')
+    return JSON.parse(content) as T
+  } catch {
+    return fallback
+  }
+}
+
+function loadOptionalJsonFileSync<T>(filePath: string, fallback: T): T {
+  if (!existsSync(filePath)) {
+    return fallback
+  }
+  const content = readFileSync(filePath, 'utf-8')
+  return JSON.parse(content) as T
+}
+
 function sanitizeLoadedState(data: unknown): StateSanitizeResult {
   if (!isRecord(data)) return { data, changed: false }
 
+  let nextData: Record<string, unknown> = { ...data }
+  let changed = false
+
+  if (isRecord(nextData.settings) && 'editorTheme' in nextData.settings) {
+    const normalizedThemeSettings = normalizeBootThemeSettings(nextData.settings)
+    nextData.settings = {
+      ...nextData.settings,
+      theme: normalizedThemeSettings.theme,
+      reduceMotion: normalizedThemeSettings.reduceMotion,
+    }
+    delete (nextData.settings as Record<string, unknown>).editorTheme
+    changed = true
+  }
+
   // Migration from workspace-based to project-based state
-  const rawWorkspaces = Array.isArray(data.workspaces) ? data.workspaces : null
-  const rawProjects = Array.isArray(data.projects) ? data.projects : null
+  const rawWorkspaces = Array.isArray(nextData.workspaces) ? nextData.workspaces : null
+  const rawProjects = Array.isArray(nextData.projects) ? nextData.projects : null
 
   // If we have old workspaces but no projects, migrate
   if (rawWorkspaces && rawWorkspaces.length > 0 && (!rawProjects || rawProjects.length === 0)) {
@@ -114,7 +146,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
     }
 
     const migratedProjects = Array.from(projectMap.values())
-    const next: Record<string, unknown> = { ...data, projects: migratedProjects }
+    const next: Record<string, unknown> = { ...nextData, projects: migratedProjects }
 
     // Use first project's id as active project
     if (migratedProjects.length > 0) {
@@ -122,7 +154,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
     }
 
     // Migrate tabs - workspaceId -> projectId
-    const rawTabs = Array.isArray(data.tabs) ? data.tabs : null
+    const rawTabs = Array.isArray(nextData.tabs) ? nextData.tabs : null
     if (rawTabs) {
       const wsToProject = new Map<string, string>()
       for (const ws of rawWorkspaces) {
@@ -140,7 +172,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
     }
 
     // Migrate lastActiveTabByWorkspace -> lastActiveTabByProject
-    if (isRecord(data.lastActiveTabByWorkspace)) {
+    if (isRecord(nextData.lastActiveTabByWorkspace)) {
       const wsToProject = new Map<string, string>()
       for (const ws of rawWorkspaces) {
         if (isRecord(ws)) {
@@ -148,7 +180,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
         }
       }
       const migrated = Object.fromEntries(
-        Object.entries(data.lastActiveTabByWorkspace).map(([wsId, tabId]) => [
+        Object.entries(nextData.lastActiveTabByWorkspace).map(([wsId, tabId]) => [
           wsToProject.get(wsId) || wsId,
           tabId,
         ])
@@ -157,7 +189,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
     }
 
     // Migrate lastActiveTabByProject (if exists from previous migration attempt)
-    if (isRecord(data.lastActiveTabByProject)) {
+    if (isRecord(nextData.lastActiveTabByProject)) {
       // Already migrated, keep as is
     }
 
@@ -172,7 +204,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
   if (rawProjects && rawProjects.length > 0) {
     const needsUpdate = rawProjects.some((p) => isProjectLike(p) && !p.branch)
     if (needsUpdate) {
-      const next = { ...data }
+      const next = { ...nextData }
       next.projects = rawProjects.map((p) => {
         if (isProjectLike(p) && !p.branch) {
           return { ...p, branch: 'main' }
@@ -183,7 +215,7 @@ function sanitizeLoadedState(data: unknown): StateSanitizeResult {
     }
   }
 
-  return { data, changed: false }
+  return { data: nextData, changed }
 }
 
 export function registerIpcHandlers(): void {
@@ -483,10 +515,17 @@ export function registerIpcHandlers(): void {
   // State persistence handlers
   const stateFilePath = () =>
     join(app.getPath('userData'), 'mickey-state.json')
+  const recoveryStateFilePath = () =>
+    join(app.getPath('userData'), 'mickey-state-recovery.json')
 
   ipcMain.handle(IPC.STATE_SAVE, async (_e, data: unknown) => {
     await mkdir(app.getPath('userData'), { recursive: true })
     await saveJsonFile(stateFilePath(), data)
+  })
+
+  ipcMain.handle(IPC.STATE_SAVE_RECOVERY, async (_e, data: unknown) => {
+    await mkdir(app.getPath('userData'), { recursive: true })
+    await saveJsonFile(recoveryStateFilePath(), data)
   })
 
   ipcMain.on(IPC.STATE_SAVE_SYNC, (event, data: unknown) => {
@@ -496,6 +535,50 @@ export function registerIpcHandlers(): void {
       event.returnValue = true
     } catch {
       event.returnValue = false
+    }
+  })
+
+  ipcMain.on(IPC.STATE_SAVE_RECOVERY_SYNC, (event, data: unknown) => {
+    try {
+      mkdirSync(app.getPath('userData'), { recursive: true })
+      writeFileSync(recoveryStateFilePath(), JSON.stringify(data, null, 2), 'utf-8')
+      event.returnValue = true
+    } catch {
+      event.returnValue = false
+    }
+  })
+
+  ipcMain.on(IPC.STATE_CLEAR_RECOVERY_SYNC, (event) => {
+    try {
+      if (existsSync(recoveryStateFilePath())) {
+        unlinkSync(recoveryStateFilePath())
+      }
+      event.returnValue = true
+    } catch {
+      event.returnValue = false
+    }
+  })
+
+  ipcMain.on(IPC.STATE_LOAD_BOOT_THEME_SYNC, (event) => {
+    try {
+      const loaded = loadJsonFileSync<unknown>(stateFilePath(), null)
+      const settings = isRecord(loaded) && isRecord(loaded.settings) ? loaded.settings : null
+      event.returnValue = normalizeBootThemeSettings(settings)
+    } catch {
+      event.returnValue = normalizeBootThemeSettings(null)
+    }
+  })
+
+  ipcMain.on(IPC.STATE_LOAD_RECOVERY_SYNC, (event) => {
+    try {
+      const loaded = loadOptionalJsonFileSync<unknown>(recoveryStateFilePath(), null)
+      const sanitized = sanitizeLoadedState(loaded)
+      if (sanitized.changed) {
+        writeFileSync(recoveryStateFilePath(), JSON.stringify(sanitized.data, null, 2), 'utf-8')
+      }
+      event.returnValue = sanitized.data
+    } catch {
+      event.returnValue = null
     }
   })
 

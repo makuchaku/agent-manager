@@ -173,13 +173,6 @@ export function findTabGroupContainingTab(root: Pane, tabId: string): TabGroup |
 }
 
 /**
- * Generate a unique ID for panes
- */
-export function generatePaneId(): string {
-  return `pane-${crypto.randomUUID()}`
-}
-
-/**
  * Check for pane ID collisions in the tree
  * Returns true if any duplicate IDs are found
  */

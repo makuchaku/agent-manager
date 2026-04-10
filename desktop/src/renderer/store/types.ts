@@ -1,4 +1,5 @@
 import type { PrInfo } from '@shared/github-types'
+import type { AppTheme } from '../../shared/theme-settings'
 
 /** Validation constants for user inputs */
 export const VALIDATION = {
@@ -90,7 +91,7 @@ export interface ProjectLayout {
 
 export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
 
-export type Theme = 'dark' | 'light'
+export type Theme = AppTheme
 
 export interface Settings {
   readonly confirmOnClose: boolean
@@ -104,7 +105,6 @@ export interface Settings {
   readonly uiFontSize: number
   readonly terminalStartupCommand: string
   readonly theme: Theme
-  readonly editorTheme: string
   readonly wordWrap: 'on' | 'off' | 'wordWrapColumn' | 'bounded'
   /** Enable reduced motion for accessibility */
   readonly reduceMotion?: boolean
@@ -124,7 +124,6 @@ export const DEFAULT_SETTINGS: Settings = {
   uiFontSize: 18,
   terminalStartupCommand: 'opencode',
   theme: 'light',
-  editorTheme: 'vs',
   wordWrap: 'on',
   reduceMotion: false,
   showLineNumbers: true,

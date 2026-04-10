@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useAppStore } from '../../store/app-store'
 import type { Settings } from '../../store/types'
 import { Tooltip } from '../Tooltip/Tooltip'
@@ -200,14 +200,14 @@ export function SettingsPanel() {
           />
 
           <SelectRow
-            label="Editor theme"
-            description="Color theme for file and diff editors"
-            value={settings.editorTheme}
-            onChange={(v) => update('editorTheme', v)}
+            label="Theme"
+            description="Color theme for the app chrome, file editor, and diff viewer"
+            value={settings.theme}
+            onChange={(v) => update('theme', v as Settings['theme'])}
             options={[
-              { value: 'vs-dark', label: 'Dark (Default)' },
-              { value: 'vs', label: 'Light' },
-              { value: 'hc-black', label: 'High Contrast' },
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+              { value: 'high-contrast', label: 'High Contrast' },
             ]}
           />
 
@@ -228,12 +228,6 @@ export function SettingsPanel() {
             placeholder="e.g., echo 'Hello'"
           />
 
-          <ToggleRow
-            label="Light theme"
-            description="Use light colors instead of dark theme"
-            value={settings.theme === 'light'}
-            onChange={(v) => update('theme', v ? 'light' : 'dark')}
-          />
         </div>
 
         <div className={styles.section}>
@@ -254,10 +248,10 @@ export function SettingsPanel() {
           />
 
           <ToggleRow
-            label="Restore workspace"
-            description="Restore the last active workspace when the app starts"
-            value={settings.restoreWorkspace}
-            onChange={(v) => update('restoreWorkspace', v)}
+            label="Restore project"
+            description="Restore the last active project when the app starts"
+            value={settings.restoreProject}
+            onChange={(v) => update('restoreProject', v)}
           />
 
           <ToggleRow

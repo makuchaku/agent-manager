@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { PatchDiff } from '@pierre/diffs/react'
 import { useAppStore } from '../../store/app-store'
+import { resolveThemeState } from '../../theme/theme-policy'
 import styles from './Editor.module.css'
 
 interface FileStatus {
@@ -96,8 +97,8 @@ interface DiffFileSectionProps {
   inline: boolean
   repoPath: string
   onOpenFile: (filePath: string) => void
-  diffTheme: string
-  diffThemeType: string
+  diffTheme: 'light' | 'tokyo-night' | 'github-dark-high-contrast'
+  diffThemeType: 'light' | 'dark'
 }
 
 const DiffFileSection = memo(function DiffFileSection({
@@ -195,10 +196,9 @@ export function DiffViewer({ repoPath, active }: Props) {
   const updateSettings = useAppStore((s) => s.updateSettings)
   const openFileTab = useAppStore((s) => s.openFileTab)
   const inline = settings.diffInline
-
-  // Map app theme to diff viewer theme
-  const diffTheme = settings.theme === 'light' ? 'light' : 'tokyo-night'
-  const diffThemeType = settings.theme === 'light' ? 'light' : 'dark'
+  const resolvedTheme = resolveThemeState(settings)
+  const diffTheme = resolvedTheme.diffTheme
+  const diffThemeType = resolvedTheme.diffThemeType
 
   // Load all changed files
   const loadFiles = useCallback(async () => {

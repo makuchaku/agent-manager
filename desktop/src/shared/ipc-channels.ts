@@ -60,9 +60,14 @@ export const IPC = {
 
    // State persistence
    STATE_SAVE: 'state:save',
+   STATE_SAVE_RECOVERY: 'state:save-recovery',
    STATE_SAVE_SYNC: 'state:save-sync',
+   STATE_SAVE_RECOVERY_SYNC: 'state:save-recovery-sync',
+   STATE_CLEAR_RECOVERY_SYNC: 'state:clear-recovery-sync',
    STATE_LOAD: 'state:load',
+   STATE_LOAD_RECOVERY_SYNC: 'state:load-recovery-sync',
+   STATE_LOAD_BOOT_THEME_SYNC: 'state:load-boot-theme-sync',
 
-   // UI operations
-   UI_RESET_LAYOUT: 'ui:reset-layout',
+    // UI operations
+    UI_RESET_LAYOUT: 'ui:reset-layout',
 } as const

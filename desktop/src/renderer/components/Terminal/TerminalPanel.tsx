@@ -22,6 +22,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { SerializeAddon } from '@xterm/addon-serialize'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { useAppStore } from '../../store/app-store'
+import { resolveThemeState } from '../../theme/theme-policy'
 import styles from './TerminalPanel.module.css'
 
 const PR_POLL_HINT_EVENT = 'makulabs-manager:pr-poll-hint'
@@ -83,6 +84,7 @@ export function TerminalPanel({ ptyId, active }: Props) {
   const flushedSeqRef = useRef(0)
   const lastStableSnapshotRef = useRef<TerminalSnapshot | null>(null)
   const terminalFontSize = useAppStore((s) => s.settings.terminalFontSize)
+  const appTheme = useAppStore((s) => s.settings.theme)
 
   const emitPrPollHint = (command: string) => {
     const normalized = command.trim().toLowerCase()
@@ -160,28 +162,7 @@ export function TerminalPanel({ ptyId, active }: Props) {
           cursorBlink: true,
           cursorStyle: 'bar',
           scrollback: 10000,
-          theme: {
-            background: '#13141b',
-            foreground: '#c0caf5',
-            cursor: '#c0caf5',
-            selectionBackground: 'rgba(122, 162, 247, 0.2)',
-            black: '#15161e',
-            red: '#f7768e',
-            green: '#9ece6a',
-            yellow: '#e0af68',
-            blue: '#7aa2f7',
-            magenta: '#bb9af7',
-            cyan: '#7dcfff',
-            white: '#a9b1d6',
-            brightBlack: '#414868',
-            brightRed: '#f7768e',
-            brightGreen: '#9ece6a',
-            brightYellow: '#e0af68',
-            brightBlue: '#7aa2f7',
-            brightMagenta: '#bb9af7',
-            brightCyan: '#7dcfff',
-            brightWhite: '#c0caf5',
-          },
+          theme: resolveThemeState(useAppStore.getState().settings).terminalTheme,
         })
 
         const fitAddon = new FitAddon()
@@ -488,6 +469,13 @@ export function TerminalPanel({ ptyId, active }: Props) {
     term.options.fontSize = terminalFontSize
     fitFnRef.current?.()
   }, [terminalFontSize])
+
+  useEffect(() => {
+    const term = termRef.current
+    if (!term) return
+
+    term.options.theme = resolveThemeState({ theme: appTheme }).terminalTheme
+  }, [appTheme])
 
   // Focus + refit when this tab becomes active.
   useEffect(() => {
